@@ -20,6 +20,7 @@ from matplotlib.patches import Circle
 import pandas as pd
 import csv
 import astropy.cosmology as cp
+from scipy.stats import norm
 
 def zwcl_galaxy_distribution(galaxy_ra,galaxy_dec,zsp,cluster_centre,R_200):
 
@@ -289,4 +290,37 @@ def radio_SFR_plots(radio_flux,solar_mass,zsp_1):
     plt.ylabel("Log(Solar mass)")
     plt.ylim(0,800)
     plt.title("SFR vs solar mass")
+    plt.show()
+
+
+def RA_DEC_seperation(cross_match_galaxy_ra_radio,cross_match_galaxy_dec_radio,cross_match_galaxy_ra_SDSS,cross_match_galaxy_dec_SDSS):
+    
+    DEC_sep=(cross_match_galaxy_dec_SDSS-cross_match_galaxy_dec_radio)*3600
+
+    RA_sep=(cross_match_galaxy_ra_SDSS-cross_match_galaxy_ra_radio)*3600
+
+    n, bins = np.histogram(RA_sep, bins=50)
+
+    bin_DEC_centre=(bins[np.argmax(n)]+bins[np.argmax(n)+1])/2
+
+    n, bins = np.histogram(DEC_sep, bins=50)
+
+    bin_RA_centre=(bins[np.argmax(n)]+bins[np.argmax(n)+1])/2
+
+
+    x = np.linspace(-10, 10, num=100)
+
+    fig = plt.figure(figsize=(13, 5))
+    plt.subplot(121)
+    plt.hist(RA_sep-bin_RA_centre, bins='auto', density=True)
+    plt.plot(x, norm.pdf(x, np.mean(RA_sep-bin_RA_centre), np.std(RA_sep-bin_RA_centre)))
+    plt.xlabel('RA sep (arcsec)')
+    plt.title("RA seperation distance distribution between radio and optical")
+    plt.subplot(122)
+    
+    plt.hist(DEC_sep-bin_DEC_centre, bins='auto', density=True)
+    plt.plot(x, norm.pdf(x, np.mean(DEC_sep-bin_DEC_centre), np.std(DEC_sep-bin_DEC_centre)))
+    plt.xlabel('DEC sep (arcsec)')
+    plt.title("DEC seperation distance distribution between radio and optical")
+
     plt.show()

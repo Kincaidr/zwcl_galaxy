@@ -41,11 +41,11 @@ def main( argv ):
 
     # zwcl_galaxy_distribution(galaxy_ra,galaxy_dec,zsp,cluster_centre,R_200)
    
-    sigma_cluster_z,new_cluster_z=velocity_dispersion(galaxy_ra,galaxy_dec,zsp,cluster_centre,R_200)
+    #sigma_cluster_z,new_cluster_z=velocity_dispersion(galaxy_ra,galaxy_dec,zsp,cluster_centre,R_200)
     
-    redshift_plots(zsp,zph,sigma_cluster_z,new_cluster_z,r_mag,z_mag)
+    #redshift_plots(zsp,zph,sigma_cluster_z,new_cluster_z,r_mag,z_mag)
     
-    radio_SFR_plots(radio_flux,solar_mass,zsp_1)
+    #radio_SFR_plots(radio_flux,solar_mass,zsp_1)
     
     RA_DEC_seperation(cross_match_galaxy_ra_radio,cross_match_galaxy_dec_radio,cross_match_galaxy_ra_SDSS,cross_match_galaxy_dec_SDSS)
  
