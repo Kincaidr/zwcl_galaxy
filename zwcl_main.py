@@ -1,11 +1,12 @@
 
 from optparse import OptionParser
 import sys
-from zwcl2341_plots import zwcl_galaxy_distribution,velocity_dispersion,redshift_plots,radio_SFR_plots,RA_DEC_seperation
+from zwcl2341_plots import zwcl_galaxy_distribution,velocity_dispersion,redshift_plots,radio_SFR_plots,RA_DEC_seperation,AGN_relation,colour_colour
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 import pandas as pd
 import csv
+import numpy as np
 
 def main( argv ):
     
@@ -39,16 +40,21 @@ def main( argv ):
     
     R_200= 0.103 #5 Mpc
 
-    # zwcl_galaxy_distribution(galaxy_ra,galaxy_dec,zsp,cluster_centre,R_200)
+    mag_filter=20
+
+    #zwcl_galaxy_distribution(galaxy_ra,galaxy_dec,zsp,cluster_centre,R_200)
    
-    #sigma_cluster_z,new_cluster_z=velocity_dispersion(galaxy_ra,galaxy_dec,zsp,cluster_centre,R_200)
+    #zph_R_200,zsp_R_200,sigma_cluster_z,new_cluster_z=velocity_dispersion(galaxy_ra,galaxy_dec,zsp,zph,cluster_centre,R_200)
     
-    #redshift_plots(zsp,zph,sigma_cluster_z,new_cluster_z,r_mag,z_mag)
+    #mag_1,mag_2,zsp_final,zph_final,target_region_filter=redshift_plots(zsp,zph,sigma_cluster_z,new_cluster_z,z_mag,r_mag,magnitude_filter)
     
     #radio_SFR_plots(radio_flux,solar_mass,zsp_1)
     
-    RA_DEC_seperation(cross_match_galaxy_ra_radio,cross_match_galaxy_dec_radio,cross_match_galaxy_ra_SDSS,cross_match_galaxy_dec_SDSS)
- 
+    #RA_DEC_seperation(cross_match_galaxy_ra_radio,cross_match_galaxy_dec_radio,cross_match_galaxy_ra_SDSS,cross_match_galaxy_dec_SDSS)
+    AGN_relation(radio_flux,zsp_1,solar_mass)
+    
+    #colour_colour(galaxy_ra,galaxy_dec,cluster_centre,R_200,zph,zsp,z_mag,r_mag,mag_filter)
+    
      
 if __name__ == "__main__":
     main(sys.argv)
