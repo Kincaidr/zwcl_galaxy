@@ -1,0 +1,170 @@
+select
+p.objid, p.ra, p.raErr, p.dec, p.decErr, pz.z as redshift,
+pz.zerr as redshift_err, p.clean,
+p.cModelMag_u as u, p.cModelMag_g as g, p.cModelMag_r as r,
+p.cModelMag_i as i, p.cModelMag_z as z,
+p.cModelMagErr_u as u_err, p.cModelMagErr_g as g_err,
+p.cModelMagErr_r as r_err, p.cModelMagErr_i as i_err,
+p.cModelMagErr_z as z_err,
+p.extinction_u, p.extinction_g, p.extinction_r, p.extinction_i,
+p.extinction_z
+into mydb.GEMSS_All_Photo_Gal_DR17_Unclean
+from
+photoobj p, photoz pz
+where
+p.objid = pz.objid
+and p.mode = 1
+and p.type = 3
+and p.ra>350 and p.ra<360
+  and p.dec>-2.5 and p.dec<3
+  and pz.z > 0 and pz.z < 1
+
+
+select
+sp.bestobjid as objid, sp.ra, sp.dec, sp.z, sp.zerr,
+sp.veldisp, sp.veldisperr, sp.subclass, sp.instrument,
+sp.survey, sp.programname, sp.class
+into mydb.GEMSS_DR17_Spec_Gal_SDSSII
+from
+specobj sp
+where
+sp.class = 'galaxy'
+and sp.bestobjid > 0
+and sp.ra>350 and sp.ra<360
+and sp.dec>-2.5 and sp.dec<3
+and sp.zwarning = 0
+and sp.z > 0
+and sp.zerr >= 0
+and sp.instrument = 'SDSS'
+
+
+select
+sp.bestobjid as objid, sp.ra, sp.dec, sp.z_noqso as z,
+sp.zerr_noqso as zerr,
+sp.veldisp, sp.veldisperr, sp.subclass_noqso as subclass,
+sp.instrument,
+sp.survey, sp.programname, sp.class_noqso as class
+into mydb.GEMSS_DR17_Spec_Gal_SDSSIV
+from
+specobj sp
+where
+sp.class_noqso = 'galaxy'
+and sp.bestobjid > 0
+and sp.ra>350 and sp.ra<360
+and sp.dec>-2.5 and sp.dec<3
+and sp.zwarning_noqso = 0
+and sp.z_noqso > 0
+and sp.zerr_noqso >= 0
+and sp.veldisp > 0
+and sp.instrument = 'BOSS'
+
+  
+select
+sp.bestobjid as objid, sp.ra, sp.dec, sp.z, sp.zerr,
+sp.veldisp, sp.veldisperr, sp.subclass, sp.instrument,
+sp.survey, sp.programname, sp.class, sp.z_noqso
+into mydb.GEMSS_DR17_Spec_QSO_SDSS
+from
+specobj sp
+where
+sp.class = 'qso'
+and sp.bestobjid > 0
+and sp.ra>350 and sp.ra<360
+and sp.dec>-2.5 and sp.dec<3
+and sp.zwarning = 0
+and sp.z > 0
+and sp.zerr >= 0
+
+
+select
+sp.ra,sp.dec,sp.z_noqso, sf.ssfr_mean, sf.age, sf.age_mean,sf.ssfr, sf.z as z_sf, sp.z, sf.specObjID as specobjid_sf, sp.z_noqso, sf.logMass,sf.logMass_err, sf.logMass_min,
+sf.logMass_max, logMass_median
+into mydb.GEMSS_DR17_Spec_SFR
+from
+specobj sp,stellarMassFSPSGranEarlyDust sf,mydb.DR17_Photo_Spec_Unclean ps,
+where
+   sf.specobjid=sp.specobjid
+  and sp.bestobjid=ps.objid
+  and sp.bestobjid > 0
+  and sp.ra>350 and sp.ra<360
+  and sp.dec>-2.5 and sp.dec<3
+  
+  
+
+SELECT *
+INTO GEMSS_DR17_Spec_All
+FROM
+(
+SELECT
+*
+FROM
+[GEMSS_DR17_Spec_Gal_SDSSII]
+UNION
+SELECT
+*
+FROM
+[GEMSS_DR17_Spec_Gal_SDSSIV]
+UNION
+SELECT
+*
+FROM
+[GEMSS_DR17_Spec_QSO_SDSS]
+UNION
+SELECT
+*
+FROM
+[GEMSS_DR17_Spec_SFR]
+) a
+
+
+
+SELECT
+*
+into mydb.GEMSS_DR17_Photo_Spec_Unclean
+FROM GEMSS_All_Photo_Gal_DR17_Unclean p
+FULL OUTER JOIN GEMSS_DR17_Spec_All s ON p.objid=s.objid
+
+
+ 
+
+select g.*
+into mydb.zwcl2341DR17UncleanViral
+from
+mydb.GEMSS_DR17_Photo_Spec_SFR g,
+dbo.fGetNearbyObjEq(355.91375,0.31208,90) as n
+where
+g.objid = n.objid
+
+select g.*
+into mydb.abell2631DR17UncleanViral
+from
+mydb.GEMSS_DR17_Photo_Spec_Unclean g,
+dbo.fGetNearbyObjEq(354.4132,0.27667,90) as n
+where
+g.objid = n.objid
+
+------------------------------------------------------------------------------------------------------------------
+
+
+select
+sp.ra,sp.dec,sp.z_noqso, sf.ssfr_mean, sf.age, sf.age_mean,sf.ssfr, sf.z as z_sf, sp.z, sf.specObjID as specobjid_sf, sp.z_noqso, sf.logMass,sf.logMass_err, sf.logMass_min,
+sf.logMass_max, logMass_median
+into mydb.GEMSS_DR17_Spec_SFR
+from
+specobj sp,stellarMassFSPSGranEarlyDust sf,mydb.DR17_Photo_Spec_Unclean ps,
+where
+   sf.specobjid=sp.specobjid
+  and sp.bestobjid=ps.objid
+  and sp.bestobjid > 0
+  and sp.ra>350 and sp.ra<360
+  and sp.dec>-2.5 and sp.dec<3
+  
+  
+  
+
+SELECT
+*
+into mydb.GEMSS_DR17_Photo_Spec_SFR
+FROM mydb.GEMSS_DR17_Photo_Spec_Unclean p
+FULL OUTER JOIN GEMSS_DR17_Spec_SFR s ON (p.objid=s.objid
+

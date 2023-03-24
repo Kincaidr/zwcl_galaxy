@@ -24,7 +24,7 @@ from scipy.stats import norm
 from scipy.optimize import curve_fit
 
 
-def zwcl_galaxy_distribution(galaxy_ra,galaxy_dec,zsp,cluster_centre,R_200):
+def zwcl_galaxy_distribution(galaxy_ra,galaxy_dec,zsp,cluster_centre,R_200,zsp_min,zsp_max):
 
 
     def histogram(sample,bins,color):
@@ -39,12 +39,11 @@ def zwcl_galaxy_distribution(galaxy_ra,galaxy_dec,zsp,cluster_centre,R_200):
   
     #xid.colnames
 
-  
     
-    redshift=np.array(zsp)[(zsp >= 0.26) & (zsp <= 0.29)]
-    galaxy_ra=np.array(galaxy_ra)[(zsp >= 0.26) & (zsp <= 0.29)]
+    redshift=np.array(zsp)[(zsp >= zsp_min) & (zsp <= zsp_max)]
+    galaxy_ra=np.array(galaxy_ra)[(zsp >= zsp_min) & (zsp <= zsp_max)]
     
-    galaxy_dec=np.array(galaxy_dec)[(zsp >= 0.26) & (zsp <= 0.29)]
+    galaxy_dec=np.array(galaxy_dec)[(zsp >= zsp_min) & (zsp <= zsp_max)]
     
 
     cluster_z=histogram(redshift,500,'#0504aa')
@@ -108,8 +107,6 @@ def zwcl_galaxy_distribution(galaxy_ra,galaxy_dec,zsp,cluster_centre,R_200):
     comoving_z =((cosmo.comoving_distance(z_filter)*z_coord).value)
 
 
-
-
     # R_200= 0.1388
         
     fig1 = plt.figure()
@@ -160,13 +157,14 @@ def zwcl_galaxy_distribution(galaxy_ra,galaxy_dec,zsp,cluster_centre,R_200):
     return(galaxy_ra,galaxy_dec,redshift)
 
 
-def velocity_dispersion(galaxy_ra,galaxy_dec,zsp,zph,cluster_centre,R_200):
+def velocity_dispersion(galaxy_ra,galaxy_dec,zsp,zph,cluster_centre,R_200,zsp_min,zsp_max):
     
+
     
-    redshift=np.array(zsp)[(zsp >= 0.26) & (zsp <= 0.29)]
-    galaxy_ra=np.array(galaxy_ra)[(zsp >= 0.26) & (zsp <= 0.29)]
+    redshift=np.array(zsp)[(zsp >= zsp_min) & (zsp <= zsp_max)]
+    galaxy_ra=np.array(galaxy_ra)[(zsp >= zsp_min) & (zsp <= zsp_max)]
     
-    galaxy_dec=np.array(galaxy_dec)[(zsp >= 0.26) & (zsp <= 0.29)]
+    galaxy_dec=np.array(galaxy_dec)[(zsp >= zsp_min) & (zsp <= zsp_max)]
     
     def histogram(sample,bins,color):
         n, bins, patches = plt.hist(sample, bins=bins, color=color, alpha=0.1, rwidth=0.85)
@@ -297,7 +295,6 @@ def redshift_plots(zsp,zph,sigma_cluster_z,new_cluster_z,mag_1,mag_2,mag_filter)
     # plt.ylim(new_cluster_z-(30*(sigma_z)),new_cluster_z+(30*(sigma_z)))
 
 
-
     plt.subplot(121)
     plt.scatter(zph_final_nofilter,zsp_final_nofilter)
     plt.plot(zsp_final_nofilter, zsp_final_nofilter, 'k-', lw=2,label='one-to-one')
@@ -360,11 +357,13 @@ def radio_SFR_plots(radio_flux,solar_mass,zsp_1):
     print('SFR',SFR)
 
     plt.scatter( solar_mass,SFR, color='black', alpha=0.5)
-    plt.ylabel("SFR in M_solar/year")
-    plt.xlabel("Log(Solar mass)")
+    plt.ylabel(r'SFR ($\mathcal{M}_\odot / year)$')
+    plt.xlabel(r'Log($\mathcal{M}_\odot)$')
     plt.ylim(0,800)
     plt.title("SFR vs solar mass")
     plt.show()
+    
+   
 
 
 def RA_DEC_seperation(cross_match_galaxy_ra_radio,cross_match_galaxy_dec_radio,cross_match_galaxy_ra_SDSS,cross_match_galaxy_dec_SDSS):
@@ -441,25 +440,21 @@ def AGN_relation(radio_flux,zsp_1,solar_mass):
 
     plt.plot(solar_mass,yfit,'k-',linewidth=2.0,label='AGN trend for 0.1 < z < 0.7')
 
-    plt.scatter( solar_mass,radio_lumo, color='blue', alpha=0.5,label='Zwcl galaxies at z ~ 0.26')
+    plt.scatter( solar_mass,radio_lumo, color='blue', alpha=0.5,label='Zwcl galaxies at zsp > 1 ')
     
     #plt.scatter( mass,lumo, color='black', alpha=0.5)
     
     #plt.ylabel("Log (L_1.4 GHz)")
     
     plt.ylabel(r'Log($\mathcal{L}^{AGN}_{1.4GHz}[W / Hz^{-1}]$')
-    
-    
-    
     plt.xlabel(r'Log($\mathcal{M} / \mathcal{M}_\odot)$')
-    plt.xlim(np.min(mass),np.max(solar_mass))
-    plt.ylim(21,25)
+    plt.xlim(np.min(solar_mass),np.max(solar_mass))
     plt.title("Low redshift AGN correlation overplotted over ZwCl galaxies")
     plt.legend()
     plt.show()
     
     
-def colour_colour(galaxy_ra,galaxy_dec,cluster_centre,R_200,zph,zsp,z_mag,r_mag,mag_filter):
+def colour_colour(galaxy_ra,galaxy_dec,cluster_centre,R_200,zph,zsp,mag_1,mag_2,mag_filter):
     
     galaxy_ra=np.array(galaxy_ra)
     galaxy_dec=np.array(galaxy_dec)
@@ -472,7 +467,7 @@ def colour_colour(galaxy_ra,galaxy_dec,cluster_centre,R_200,zph,zsp,z_mag,r_mag,
     zsp_R_200=[]
     zph_R_200=[]
     for i in range(len(galaxy_ra)):
-        if np.sqrt((galaxy_ra[i]-cluster_centre[0])**2+(galaxy_dec[i]-cluster_centre[1])**2)<= R_200:
+        if np.sqrt((galaxy_ra[i]-cluster_centre.ra.value)**2+(galaxy_dec[i]-cluster_centre.dec.value)**2)<= R_200:
             zph_R_200.append(zph[i])
             zsp_R_200.append(zsp[i])
     
@@ -512,9 +507,9 @@ def colour_colour(galaxy_ra,galaxy_dec,cluster_centre,R_200,zph,zsp,z_mag,r_mag,
   
 
     
-    plt.scatter( colour_1_zsp,colour_1_zsp-colour_2_zsp, color='blue', alpha=0.5,label='Spectra from 0.26 <z < 0.30')
+    plt.scatter( colour_1_zsp,np.abs(colour_1_zsp-colour_2_zsp), color='blue', alpha=0.5,label='Spectra from 0.26 <z < 0.30')
     
-    plt.scatter( colour_1_zph,colour_1_zph-colour_2_zph, color='black', alpha=0.3,label='Photometry from 0.20 <z < 0.40',marker="x")
+    plt.scatter( colour_1_zph,np.abs(colour_1_zph-colour_2_zph), color='black', alpha=0.3,label='Photometry from 0.20 <z < 0.40',marker="x")
     
     
     plt.ylabel(r'$mag_1-mag_2$')
