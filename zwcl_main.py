@@ -10,16 +10,10 @@ import numpy as np
 
 def main( argv ):
     
-    SDSS_catalogue = pd.read_csv(r'zwcl2341DR17UncleanViral_kincaid_1.csv')
+    SDSS_catalogue = pd.read_csv(r'Zwcl2341_Spec_Photo.csv')
    
-    radio_SDSS_catalogue = pd.read_csv(r'SDSS_radio_combined.csv')
-    
     galaxy_ra=SDSS_catalogue['ra']
     galaxy_dec=SDSS_catalogue['dec']
-    cross_match_galaxy_ra_radio=radio_SDSS_catalogue['ra_1']
-    cross_match_galaxy_dec_radio=radio_SDSS_catalogue['dec_1']
-    cross_match_galaxy_ra_SDSS=radio_SDSS_catalogue['RA_2']
-    cross_match_galaxy_dec_SDSS=radio_SDSS_catalogue['DEC_2']
     zsp=SDSS_catalogue['zsp']
     zph=SDSS_catalogue['zph']
     u_mag=SDSS_catalogue['u']
@@ -27,15 +21,20 @@ def main( argv ):
     r_mag=SDSS_catalogue['r']
     i_mag=SDSS_catalogue['i']
     z_mag=SDSS_catalogue['z']
+    
+    radio_SDSS_catalogue = pd.read_csv(r'Zwcl2341_Spec_Photo_Radio.csv')
 
+    cross_match_galaxy_ra_radio=radio_SDSS_catalogue['ra_1']
+    cross_match_galaxy_dec_radio=radio_SDSS_catalogue['dec_1']
+    cross_match_galaxy_ra_SDSS=radio_SDSS_catalogue['RA_2']
+    cross_match_galaxy_dec_SDSS=radio_SDSS_catalogue['DEC_2']
 
-    radio_SDSS_SFR_catalogue = pd.read_csv(r'solar_mass.csv')
+    radio_SDSS_SFR_catalogue = pd.read_csv(r'Zwcl2341_Spec_Photo_SFR_Radio.csv')
 
     radio_flux=radio_SDSS_SFR_catalogue['Total_flux']
     solar_mass=radio_SDSS_SFR_catalogue['logMass']
     zsp_1=radio_SDSS_SFR_catalogue['zsp']
     
-    #cluster_centre= [355.91541666667,0.33083333333333]
     
     cluster_centre=SkyCoord(str(355.91541666667), str(0.33083333333333), frame='icrs',unit=(u.deg,u.deg))
     
