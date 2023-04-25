@@ -1,6 +1,57 @@
+#!/usr/bin/env python
+from astroquery.sdss import SDSS
+from astropy import coordinates as coords
+import matplotlib.pyplot as plt
+from astropy.coordinates import Angle
+import numpy as np
+from astropy.stats import biweight_scale
+from astropy.io import ascii
+from astropy import units as u
+from astropy.coordinates import SkyCoord
+from matplotlib.pyplot import show, plot, draw
+from multiprocessing import Process
+from scipy.constants import pi
+import scipy.constants as constants
+import statistics as stats
+import astropy.cosmology as cp
+import sys
+from astropy.io import fits
+from matplotlib.patches import Circle
+import pandas as pd
+import csv
+import astropy.cosmology as cp
+from scipy.stats import norm
+from scipy.optimize import curve_fit
 
 
+def zwcl_galaxy_distribution(galaxy_ra,galaxy_dec,zsp,cluster_centre,R_200,zsp_min,zsp_max):
+    
+    redshift=np.array(zsp)[(zsp >= zsp_min) & (zsp <= zsp_max)]
+    galaxy_ra=np.array(galaxy_ra)[(zsp >= zsp_min) & (zsp <= zsp_max)]
+    
+    galaxy_dec=np.array(galaxy_dec)[(zsp >= zsp_min) & (zsp <= zsp_max)]
 
+    def histogram(sample,bins,color):
+        n, bins, patches = plt.hist(sample, bins=bins, color=color, alpha=0.1, rwidth=0.85)
+        cluster_z=bins[np.argmax(n)]
+        return cluster_z
+
+    zsp_min_1=0
+    zsp_max_1=1
+    zsp_min_2=0.26
+    zsp_max_2=0.3
+
+
+    ra_5Mpc_circle=[]
+    dec_5Mpc_circle=[]
+    zsp_R_200=[]
+    zph_R_200=[]
+    
+    for i in range(len(galaxy_ra)):
+        if np.sqrt((galaxy_ra[i]-cluster_centre.ra.value)**2+(galaxy_dec[i]-cluster_centre.dec.value)**2)<= R_200:
+            ra_5Mpc_circle.append(galaxy_ra[i])
+            dec_5Mpc_circle.append(galaxy_dec[i])
+            zsp_R_200.append(redshift[i])
           
     
     print('arcmin circle',len(zsp_R_200))

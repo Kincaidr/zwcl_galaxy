@@ -21,7 +21,7 @@ def gauss(x, *p):
 
 #fit_files=glob.glob('all_gals/*.fit')
 #fit_files=glob.glob('all_gals_fors2/*.fit')
-fit_files=glob.glob('all_gals_mmt/*.fit')
+fit_files=glob.glob('*.fit')
 #fit_files=glob.glob('all_gals_vimos/*.fit')
 fit_files=sorted(fit_files, key=natural_key)
 #sed_files=sorted(sed_files, key=natural_key)
@@ -30,11 +30,11 @@ print( len(fit_files))
 
 index=[]
 for i in fit_files:
-    x=i.split('/')[1] #for other galaxies
+    #x=i.split('/')[1] #for other galaxies
     y=x.split('.')[0]
     #y=i.split('.')[0]
     index=np.append(index,y)
-    
+    print(index)
 
 sfr_sigmas = np.array([])
 ssfr_sigmas = np.array([])
