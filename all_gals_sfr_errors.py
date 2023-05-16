@@ -7,7 +7,7 @@ import os,sys,string, math
 from astropy.io import ascii
 from astropy.table import Table, Column, vstack
 import glob
-import re
+#import re
 
 
 def natural_key(string_):

@@ -1,55 +1,60 @@
 
 from optparse import OptionParser
 import sys
-from zwcl2341_plots import zwcl_galaxy_distribution,velocity_dispersion,redshift_plots,radio_SFR_plots,RA_DEC_seperation,AGN_relation,SDSS_DeCALS,colour_colour
+from zwcl2341_plots import zwcl_galaxy_distribution,velocity_dispersion,redshift_plots,radio_SFR_plots,RA_DEC_seperation,AGN_relation,SDSS_DeCALS,colour_colour,circle
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 import pandas as pd
 import csv
 import numpy as np
+from astropy.io import fits
 
 def main( argv ):
     
-    SDSS_catalogue = pd.read_csv(r'Zwcl2341_Spec_Photo.csv')
-    SDSS_DeCALS_catalogue=pd.read_csv(r'SDSS_Spec_Photo_DeCALS.csv')
+    #SDSS_catalogue = pd.read_csv(r'Zwcl2341_DeCALS.csv')
+    SDSS_catalogue_fits = fits.open(r'Zwcl2341_DeCALS.fits')
+    SDSS_catalogue=SDSS_catalogue_fits[1].data
+                                 
+
+    #SDSS_DeCALS_catalogue=pd.read_csv(r'SDSS_Spec_Photo_DeCALS.csv')
     galaxy_ra=SDSS_catalogue['ra']
     galaxy_dec=SDSS_catalogue['dec']
-    zsp=SDSS_catalogue['zsp']
-    zph=SDSS_catalogue['zph']
-    u_mag=SDSS_catalogue['u']
-    u_err=SDSS_catalogue['u_err']
-    g_mag=SDSS_catalogue['g']
-    g_err=SDSS_catalogue['g_err']
-    r_mag=SDSS_catalogue['r']
-    r_err=SDSS_catalogue['r_err']
-    i_mag=SDSS_catalogue['i']
-    i_err=SDSS_catalogue['i_err']
-    z_mag=SDSS_catalogue['z']
-    z_err=SDSS_catalogue['z_err']
+    zsp=SDSS_catalogue['z_spec']
+    # zph=SDSS_catalogue['zph']
+    # u_mag=SDSS_catalogue['u']
+    # u_err=SDSS_catalogue['u_err']
+    # g_mag=SDSS_catalogue['g']
+    # g_err=SDSS_catalogue['g_err']
+    # r_mag=SDSS_catalogue['r']
+    # r_err=SDSS_catalogue['r_err']
+    # i_mag=SDSS_catalogue['i']
+    # i_err=SDSS_catalogue['i_err']
+    # z_mag=SDSS_catalogue['z']
+    # z_err=SDSS_catalogue['z_err']
     
-    u_err=SDSS_DeCALS_catalogue['u_err']
-    g_err=SDSS_DeCALS_catalogue['g_err']
-    r_err=SDSS_DeCALS_catalogue['r_err']
-    i_err=SDSS_DeCALS_catalogue['i_err']
-    flux_i=SDSS_DeCALS_catalogue['FLUX_I']
-    ivar_i=SDSS_DeCALS_catalogue['FLUX_IVAR_I']
-    flux_g=SDSS_DeCALS_catalogue['FLUX_G']
-    ivar_g=SDSS_DeCALS_catalogue['FLUX_IVAR_G']
-    flux_r=SDSS_DeCALS_catalogue['FLUX_R']
-    ivar_r=SDSS_DeCALS_catalogue['FLUX_IVAR_R']
+    # u_err=SDSS_DeCALS_catalogue['u_err']
+    # g_err=SDSS_DeCALS_catalogue['g_err']
+    # r_err=SDSS_DeCALS_catalogue['r_err']
+    # i_err=SDSS_DeCALS_catalogue['i_err']
+    # flux_i=SDSS_DeCALS_catalogue['FLUX_I']
+    # ivar_i=SDSS_DeCALS_catalogue['FLUX_IVAR_I']
+    # flux_g=SDSS_DeCALS_catalogue['FLUX_G']
+    # ivar_g=SDSS_DeCALS_catalogue['FLUX_IVAR_G']
+    # flux_r=SDSS_DeCALS_catalogue['FLUX_R']
+    # ivar_r=SDSS_DeCALS_catalogue['FLUX_IVAR_R']
     
-    radio_SDSS_catalogue = pd.read_csv(r'Zwcl2341_Spec_Photo_Radio.csv')
+    # radio_SDSS_catalogue = pd.read_csv(r'Zwcl2341_Spec_Photo_Radio.csv')
 
-    cross_match_galaxy_ra_radio=radio_SDSS_catalogue['ra_1']
-    cross_match_galaxy_dec_radio=radio_SDSS_catalogue['dec_1']
-    cross_match_galaxy_ra_SDSS=radio_SDSS_catalogue['RA_2']
-    cross_match_galaxy_dec_SDSS=radio_SDSS_catalogue['DEC_2']
+    # cross_match_galaxy_ra_radio=radio_SDSS_catalogue['ra_1']
+    # cross_match_galaxy_dec_radio=radio_SDSS_catalogue['dec_1']
+    # cross_match_galaxy_ra_SDSS=radio_SDSS_catalogue['RA_2']
+    # cross_match_galaxy_dec_SDSS=radio_SDSS_catalogue['DEC_2']
 
-    radio_SDSS_SFR_catalogue = pd.read_csv(r'Zwcl2341_Spec_Photo_SFR_Radio.csv')
+    # radio_SDSS_SFR_catalogue = pd.read_csv(r'Zwcl2341_Spec_Photo_SFR_Radio.csv')
 
-    radio_flux=radio_SDSS_SFR_catalogue['Total_flux']
-    solar_mass=radio_SDSS_SFR_catalogue['logMass']
-    zsp_1=radio_SDSS_SFR_catalogue['zsp']
+    # radio_flux=radio_SDSS_SFR_catalogue['Total_flux']
+    # solar_mass=radio_SDSS_SFR_catalogue['logMass']
+    # zsp_1=radio_SDSS_SFR_catalogue['zsp']
     
 
     
@@ -62,7 +67,9 @@ def main( argv ):
 
     mag_filter=20
 
-    zph_R_200,zsp_R_200=zwcl_galaxy_distribution(galaxy_ra,galaxy_dec,zsp,cluster_centre,R_200,zsp_min,zsp_max)
+    circle(galaxy_ra,galaxy_dec,zsp,cluster_centre,zsp_min,zsp_max)
+
+    #zph_R_200,zsp_R_200=zwcl_galaxy_distribution(galaxy_ra,galaxy_dec,zsp,cluster_centre,R_200,zsp_min,zsp_max)
    
     #zph_R_200,zsp_R_200,sigma_cluster_z,new_cluster_z=velocity_dispersion(galaxy_ra,galaxy_dec,zsp,zph,cluster_centre,R_200,zsp_min,zsp_max)
     

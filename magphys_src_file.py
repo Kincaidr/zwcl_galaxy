@@ -17,8 +17,8 @@ def ivar2errflux(ivar):
     df = np.sqrt(1/ivar) 
     return df
 
-fluxes=['FLUX_G','FLUX_R', 'FLUX_I', 'FLUX_Z','FLUX_W1','FLUX_W2','FLUX_W3','FLUX_W4']
-flux_uncertanties=['FLUX_IVAR_G', 'FLUX_IVAR_R', 'FLUX_IVAR_I' ,'FLUX_IVAR_Z','FLUX_IVAR_W1','FLUX_IVAR_W2','FLUX_IVAR_W3','FLUX_IVAR_W4']
+fluxes=['FLUX_G','FLUX_R', 'FLUX_I', 'FLUX_Z']#,'FLUX_W1','FLUX_W2','FLUX_W3','FLUX_W4']
+flux_uncertanties=['FLUX_IVAR_G', 'FLUX_IVAR_R', 'FLUX_IVAR_I' ,'FLUX_IVAR_Z']#,'FLUX_IVAR_W1','FLUX_IVAR_W2','FLUX_IVAR_W3','FLUX_IVAR_W4']
 
 f = open("observations.dat", "w")
 

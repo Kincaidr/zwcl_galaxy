@@ -23,6 +23,31 @@ import astropy.cosmology as cp
 from scipy.stats import norm
 from scipy.optimize import curve_fit
 
+def circle(galaxy_ra,galaxy_dec,zsp,cluster_centre,zsp_min,zsp_max):
+
+    galaxy_ra_new=[]
+    galaxy_dec_new=[]
+    redshift_new=[]
+
+
+    for i in range(len(galaxy_ra)):
+        if np.sqrt((galaxy_ra[i]-cluster_centre.ra.value)**2+(galaxy_dec[i]-cluster_centre.dec.value)**2)<= 1.5:
+            galaxy_ra_new.append(galaxy_ra[i])
+            galaxy_dec_new.append(galaxy_dec[i])
+            redshift_new.append(zsp[i])
+        redshift_new=np.array(redshift_new)
+
+    
+    galaxy_ra=np.array(galaxy_ra_new)[(redshift_new >= zsp_min) & (redshift_new <= zsp_max)]
+
+    galaxy_dec=np.array(galaxy_dec_new)[(redshift_new >= zsp_min) & (redshift_new <= zsp_max)]
+
+    plt.scatter(galaxy_ra,galaxy_dec)
+
+    plt.show()
+
+
+
 
 def zwcl_galaxy_distribution(galaxy_ra,galaxy_dec,zsp,cluster_centre,R_200,zsp_min,zsp_max):
     
@@ -46,7 +71,9 @@ def zwcl_galaxy_distribution(galaxy_ra,galaxy_dec,zsp,cluster_centre,R_200,zsp_m
     dec_5Mpc_circle=[]
     zsp_R_200=[]
     zph_R_200=[]
-    
+
+#90arcmin radius
+
     for i in range(len(galaxy_ra)):
         if np.sqrt((galaxy_ra[i]-cluster_centre.ra.value)**2+(galaxy_dec[i]-cluster_centre.dec.value)**2)<= R_200:
             ra_5Mpc_circle.append(galaxy_ra[i])
@@ -108,8 +135,6 @@ def zwcl_galaxy_distribution(galaxy_ra,galaxy_dec,zsp,cluster_centre,R_200,zsp_m
     cluster_centre_z=cartesian_cluster_centre.z.value
 
     # reference to centre
-
-
 
 
     print('new cluster z:' ,new_cluster_z)  
