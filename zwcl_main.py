@@ -1,11 +1,9 @@
 
-from optparse import OptionParser
 import sys
-from zwcl2341_plots import zwcl_galaxy_distribution,velocity_dispersion,redshift_plots,radio_SFR_plots,RA_DEC_seperation,AGN_relation,SDSS_DeCALS,colour_colour,circle
+from zwcl2341_plots import circle, redshift_distribution,cluster_members,zwcl_galaxy_distribution,velocity_dispersion,redshift_plots,radio_SFR_plots,RA_DEC_seperation,AGN_relation,SDSS_DeCALS,colour_colour,circle
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 import pandas as pd
-import csv
 import numpy as np
 from astropy.io import fits
 
@@ -63,13 +61,15 @@ def main( argv ):
     zsp_min=0.26
     zsp_max=0.30
     
+    search_radius = 1.5
+
     R_200= 0.103 #5 Mpc
 
     mag_filter=20
 
-    circle(galaxy_ra,galaxy_dec,zsp,cluster_centre,zsp_min,zsp_max)
+    galaxy_ra_circle,galaxy_dec_circle,redshift_circle=circle(galaxy_ra,galaxy_dec,zsp,cluster_centre,zsp_min,zsp_max,search_radius)
 
-    #zph_R_200,zsp_R_200=zwcl_galaxy_distribution(galaxy_ra,galaxy_dec,zsp,cluster_centre,R_200,zsp_min,zsp_max)
+    #zph_R_200,zsp_R_200=zwcl_galaxy_distribution(galaxy_ra_circle,galaxy_dec_circle,redshift_circle,cluster_centre,R_200,zsp_min,zsp_max)
    
     #zph_R_200,zsp_R_200,sigma_cluster_z,new_cluster_z=velocity_dispersion(galaxy_ra,galaxy_dec,zsp,zph,cluster_centre,R_200,zsp_min,zsp_max)
     
