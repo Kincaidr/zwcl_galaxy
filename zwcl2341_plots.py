@@ -48,11 +48,33 @@ def circle(galaxy_ra,galaxy_dec,zsp,cluster_centre,zsp_min,zsp_max,search_radius
 
     plt.show()
 
-    return(galaxy_ra_circle,galaxy_dec_circle,redshift_)
+    return(galaxy_ra_circle,galaxy_dec_circle,redshift)
+
+
+def redshift_distribution(galaxy_ra_circle,galaxy_dec_circle,redshift_circle,cluster_centre,R_200,zsp_min,zsp_max):
+
+    zsp_min_1=0
+    zsp_max_1=1
+
+    redshift_1=np.array(redshift_circle)[(np.array(redshift_circle) >= zsp_min) & (np.array(redshift_circle)<= zsp_max)]
+    redshift_2=np.array(redshift_circle)[(np.array(redshift_circle) >= zsp_min_1) & (np.array(redshift_circle)<= zsp_max_1)]
+
+    fig = plt.figure(figsize=(6, 4))
+    
+    ax1 = fig.add_axes([0.1,0.1,0.9,0.9])
+    ax2 = fig.add_axes([0.70, 0.72,0.25,0.25])
+
+    ax1.hist(redshift_1,bins=100)
+    ax2.hist(redshift_2,bins=50)
+   
+    ax1.set_xlabel('Redshift',fontsize=15)
+    ax1.set_ylabel('Number of galaxies',fontsize=15)
+
+    plt.show()
 
 
 
-def redshift_distribution(galaxy_ra_new,galaxy_dec_new,redshift_circle，cluster_centre,R_200,zsp_min,zsp_max):
+def cluster_members(galaxy_ra_circle,galaxy_dec_circle,redshift_circle,cluster_centre,R_200,zsp_min,zsp_max):
     
 
     def histogram(sample,bins,color):
@@ -84,23 +106,6 @@ def redshift_distribution(galaxy_ra_new,galaxy_dec_new,redshift_circle，cluster
     redshift_2=np.array(zsp_R200)[(np.array(zsp_R200) >= zsp_min_1) & (np.array(zsp_R200)<= zsp_max_1)]
 
 
-    fig = plt.figure(figsize=(6, 4))
-    
-    ax1 = fig.add_axes([0.1,0.1,0.9,0.9])
-    ax2 = fig.add_axes([0.70, 0.72,0.25,0.25])
-
-    ax1.hist(redshift_1,bins=100)
-    ax2.hist(redshift_2,bins=50)
-   
-    ax1.set_xlabel('Redshift',fontsize=15)
-    ax1.set_ylabel('Number of galaxies',fontsize=15)
-
-    plt.show()
-
-
-
-
-def cluster_members(ra_R200,dec_R200,redshift_1):
 
     cluster_z_median_1= np.median(redshift_1)
     print('cluster z median for 0.26 < z < 0.30: ',new_cluster_z)
@@ -161,8 +166,6 @@ def cluster_members(ra_R200,dec_R200,redshift_1):
     galaxy_ra_background=np.array(galaxy_ra_circle)[np.where(background)]
     galaxy_dec_background=np.array(galaxy_dec_circle)[np.where(background)]
 
-
-
     
     mask = (redshift_circle>=new_cluster_z-3*(sigma))&(redshift_circle<=new_cluster_z+3*(sigma))
 
@@ -178,7 +181,7 @@ def cluster_members(ra_R200,dec_R200,redshift_1):
 
     return(sigma_cluster_z,new_cluster_z)
 
-def zwcl_galaxy_distribution(galaxy_ra_new,galaxy_dec_new,redshift_circle，cluster_centre,R_200,zsp_min,zsp_max):
+def zwcl_galaxy_distribution(galaxy_ra_new,galaxy_dec_new,redshift_circle,cluster_centre,R_200,zsp_min,zsp_max):
 
     h=0.7
     H0=h*100
