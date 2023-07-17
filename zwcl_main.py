@@ -9,26 +9,27 @@ from astropy.io import fits
 
 def main( argv ):
     
-    #SDSS_catalogue = pd.read_csv(r'Zwcl2341_DeCALS.csv')
-    SDSS_catalogue_fits = fits.open(r'Zwcl2341_DeCALS.fits')
+
+    SDSS_catalogue_fits = fits.open(r'Zwcl2341_DeCALS_SDSS.fits')
     SDSS_catalogue=SDSS_catalogue_fits[1].data
                                  
 
     #SDSS_DeCALS_catalogue=pd.read_csv(r'SDSS_Spec_Photo_DeCALS.csv')
-    galaxy_ra=SDSS_catalogue['ra']
-    galaxy_dec=SDSS_catalogue['dec']
-    zsp=SDSS_catalogue['z_spec']
-    # zph=SDSS_catalogue['zph']
-    # u_mag=SDSS_catalogue['u']
-    # u_err=SDSS_catalogue['u_err']
-    # g_mag=SDSS_catalogue['g']
-    # g_err=SDSS_catalogue['g_err']
-    # r_mag=SDSS_catalogue['r']
-    # r_err=SDSS_catalogue['r_err']
-    # i_mag=SDSS_catalogue['i']
-    # i_err=SDSS_catalogue['i_err']
-    # z_mag=SDSS_catalogue['z']
-    # z_err=SDSS_catalogue['z_err']
+    galaxy_ra=SDSS_catalogue['ra_1']
+    galaxy_dec=SDSS_catalogue['dec_1']
+    zph=SDSS_catalogue['z_spec']
+    zsp=SDSS_catalogue['zsp']
+
+    u_mag=SDSS_catalogue['u']
+    u_err=SDSS_catalogue['u_err']
+    g_mag=SDSS_catalogue['g']
+    g_err=SDSS_catalogue['g_err']
+    r_mag=SDSS_catalogue['r']
+    r_err=SDSS_catalogue['r_err']
+    i_mag=SDSS_catalogue['i']
+    i_err=SDSS_catalogue['i_err']
+    z_mag=SDSS_catalogue['z']
+    z_err=SDSS_catalogue['z_err']
     
     # u_err=SDSS_DeCALS_catalogue['u_err']
     # g_err=SDSS_DeCALS_catalogue['g_err']
@@ -41,39 +42,47 @@ def main( argv ):
     # flux_r=SDSS_DeCALS_catalogue['FLUX_R']
     # ivar_r=SDSS_DeCALS_catalogue['FLUX_IVAR_R']
     
-    # radio_SDSS_catalogue = pd.read_csv(r'Zwcl2341_Spec_Photo_Radio.csv')
 
-    # cross_match_galaxy_ra_radio=radio_SDSS_catalogue['ra_1']
-    # cross_match_galaxy_dec_radio=radio_SDSS_catalogue['dec_1']
-    # cross_match_galaxy_ra_SDSS=radio_SDSS_catalogue['RA_2']
-    # cross_match_galaxy_dec_SDSS=radio_SDSS_catalogue['DEC_2']
 
-    # radio_SDSS_SFR_catalogue = pd.read_csv(r'Zwcl2341_Spec_Photo_SFR_Radio.csv')
+    radio_SDSS_catalogue = fits.open(r'Zwcl2341_DeCALS_radio.fits')
+    radio_SDSS_catalogue=radio_SDSS_catalogue[1].data
 
-    # radio_flux=radio_SDSS_SFR_catalogue['Total_flux']
-    # solar_mass=radio_SDSS_SFR_catalogue['logMass']
-    # zsp_1=radio_SDSS_SFR_catalogue['zsp']
-    
+
+
+    cross_match_galaxy_ra_radio=SDSS_catalogue['ra_1']
+    cross_match_galaxy_dec_radio=SDSS_catalogue['dec_1']
+
+    cross_match_galaxy_ra_SDSS=SDSS_catalogue['ra_2']
+    cross_match_galaxy_dec_SDSS=SDSS_catalogue['dec_2']
+
+
+
 
     
     cluster_centre=SkyCoord(str(355.91541666667), str(0.33083333333333), frame='icrs',unit=(u.deg,u.deg))
     
-    zsp_min=0.26
+    zsp_min=0.24
     zsp_max=0.30
     
     search_radius = 1.5
 
     R_200= 0.103 #5 Mpc
 
-    mag_filter=20
+    mag1_filter=20
+    
+    
+    mag2_filter=20
 
     galaxy_ra_circle,galaxy_dec_circle,redshift_circle=circle(galaxy_ra,galaxy_dec,zsp,cluster_centre,zsp_min,zsp_max,search_radius)
 
-    #zph_R_200,zsp_R_200=zwcl_galaxy_distribution(galaxy_ra_circle,galaxy_dec_circle,redshift_circle,cluster_centre,R_200,zsp_min,zsp_max)
+    # #zph_R_200,zsp_R_200=zwcl_galaxy_distribution(galaxy_ra_circle,galaxy_dec_circle,redshift_circle,cluster_centre,R_200,zsp_min,zsp_max)
    
-    #zph_R_200,zsp_R_200,sigma_cluster_z,new_cluster_z=velocity_dispersion(galaxy_ra,galaxy_dec,zsp,zph,cluster_centre,R_200,zsp_min,zsp_max)
+    sigma_cluster_z,new_cluster_z,zph_R_200,zsp_R_200 =velocity_dispersion(galaxy_ra,galaxy_dec,zsp,zph,cluster_centre,R_200,zsp_min,zsp_max)
     
-    #mag_1,mag_2,zsp_final,zph_final,target_region_filter=redshift_plots(zsp,zph,sigma_cluster_z,new_cluster_z,z_mag,r_mag,mag_filter)
+    cluster_members(galaxy_ra_circle,galaxy_dec_circle,redshift_circle,sigma_cluster_z,new_cluster_z)
+
+    
+    mag_1,mag_2,zsp_final,zph_final,target_region_filter=redshift_plots(zsp,zph,sigma_cluster_z,new_cluster_z,z_mag,r_mag,mag1_filter,mag2_filter)
     
     #radio_SFR_plots(radio_flux,solar_mass,zsp_1)
     

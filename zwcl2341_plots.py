@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from astroquery.sdss import SDSS
+#from astroquery.sdss import SDSS
 from astropy import coordinates as coords
 import matplotlib.pyplot as plt
 from astropy.coordinates import Angle
@@ -46,9 +46,13 @@ def circle(galaxy_ra,galaxy_dec,zsp,cluster_centre,zsp_min,zsp_max,search_radius
     
     plt.scatter(galaxy_ra_new,galaxy_dec_new)
 
-    plt.show()
+    plt.xlabel("RA in deg")
+    plt.ylabel("DEC in deg")
+    plt.title("1.5 deg SDSS DR17 galaxies of Zwcl 2341")
 
-    return(galaxy_ra_circle,galaxy_dec_circle,redshift)
+    
+
+    return(galaxy_ra_circle,galaxy_dec_circle,redshift_circle)
 
 
 def redshift_distribution(galaxy_ra_circle,galaxy_dec_circle,redshift_circle,cluster_centre,R_200,zsp_min,zsp_max):
@@ -59,7 +63,7 @@ def redshift_distribution(galaxy_ra_circle,galaxy_dec_circle,redshift_circle,clu
     redshift_1=np.array(redshift_circle)[(np.array(redshift_circle) >= zsp_min) & (np.array(redshift_circle)<= zsp_max)]
     redshift_2=np.array(redshift_circle)[(np.array(redshift_circle) >= zsp_min_1) & (np.array(redshift_circle)<= zsp_max_1)]
 
-    fig = plt.figure(figsize=(6, 4))
+    fig = plt.figure(figsize=(5, 3))
     
     ax1 = fig.add_axes([0.1,0.1,0.9,0.9])
     ax2 = fig.add_axes([0.70, 0.72,0.25,0.25])
@@ -69,117 +73,134 @@ def redshift_distribution(galaxy_ra_circle,galaxy_dec_circle,redshift_circle,clu
    
     ax1.set_xlabel('Redshift',fontsize=15)
     ax1.set_ylabel('Number of galaxies',fontsize=15)
+    ax1.set_title("SDSS spectroscopic redshift distribution of galaxies within 1.5 deg of Zwcl 2341")
+    plt.savefig('zwcl_redshift_distribution.png')
+   
 
-    plt.show()
-
-
-
-def cluster_members(galaxy_ra_circle,galaxy_dec_circle,redshift_circle,cluster_centre,R_200,zsp_min,zsp_max):
+def velocity_dispersion(galaxy_ra,galaxy_dec,zsp,zph,cluster_centre,R_200,zsp_min,zsp_max):
     
 
+    redshift=np.array(zsp)
+    
     def histogram(sample,bins,color):
         n, bins, patches = plt.hist(sample, bins=bins, color=color, alpha=0.1, rwidth=0.85)
         cluster_z=bins[np.argmax(n)]
         return cluster_z
-
-
-    ra_R200_circle=[]
-    dec_R200_circle=[]
-    zsp_R200=[]
-
-
-#R200 radius
-
-    for i in range(len(galaxy_ra_new)):
-        if np.sqrt((galaxy_ra_new[i]-cluster_centre.ra.value)**2+(galaxy_dec_new[i]-cluster_centre.dec.value)**2)<= R_200:
-            ra_R200_circle.append(galaxy_ra_new[i])
-            dec_R200_circle.append(galaxy_dec_new[i])
-            zsp_R200.append(redshift_circle[i])
-          
     
-    print('arcmin circle',len(zsp_R200))
+    cluster_centre_ra_radian=cluster_centre.ra.radian
+    cluster_centre_dec_radian=cluster_centre.dec.radian
 
-    zsp_min_1=0
-    zsp_max_1=1
-
-    redshift_1=np.array(zsp_R200)[(np.array(zsp_R200) >= zsp_min) & (np.array(zsp_R200)<= zsp_max)]
-    redshift_2=np.array(zsp_R200)[(np.array(zsp_R200) >= zsp_min_1) & (np.array(zsp_R200)<= zsp_max_1)]
-
-
-
-    cluster_z_median_1= np.median(redshift_1)
-    print('cluster z median for 0.26 < z < 0.30: ',new_cluster_z)
-
-    cluster_z_median_2= np.median(redshift_2)
-
-
-    new_cluster_z=histogram(redshift_1,100,'#0504ab')
-
-
-    #xid.colnames
+    cluster_centre=[cluster_centre.ra.value,cluster_centre.dec.value]
     
-    ra_radian = np.array(galaxy_ra_circle)*np.pi/180
+    ra_5Mpc_circle=[]
+    dec_5Mpc_circle=[]
+    zsp_R_200=[]
+    zph_R_200=[]
+    for i in range(len(galaxy_ra)):
+        if np.sqrt((galaxy_ra[i]-cluster_centre[0])**2+(galaxy_dec[i]-cluster_centre[1])**2)<= R_200:
+            ra_5Mpc_circle.append(galaxy_ra[i])
+            dec_5Mpc_circle.append(galaxy_dec[i])
+            zsp_R_200.append(redshift[i])
+            zph_R_200.append(zph[i])
+        
 
-    dec_radian = np.array(galaxy_dec_circle)*np.pi/180
+    print('arcmin circle',zsp_R_200)
+    
 
+    zsp_R_200=np.array(zsp_R_200)[~np.isnan(zsp_R_200)]
 
-    print('new cluster z:' ,new_cluster_z)  
+    new_cluster_z=np.median(zsp_R_200)
+    
+    new_cluster_z=histogram(zsp_R_200,100,'#0504ab')
 
+ 
+    print('new cluster z from histogram:' ,new_cluster_z )
+
+    R_200_members=[]
+
+    for i in range(len(zsp_R_200)):
+        if (zsp_R_200[i] >= new_cluster_z - 0.015) and (zsp_R_200[i] <= new_cluster_z + 0.015):
+            R_200_members.append(zsp_R_200[i]) 
+
+    print(max(R_200_members),min(R_200_members),len(R_200_members))
 
     #Cluster members
-
-    R_200_members=np.array(redshift_1 )[(redshift_1 >= new_cluster_z - 0.015) & (redshift_1 <= new_cluster_z + 0.015)]
-
     
     v_rec_vel=np.array(np.array(R_200_members)*constants.c)
-          
+    
+
     median_rec_vel=stats.median(v_rec_vel)
     
     v_rest_vel=np.array(v_rec_vel - median_rec_vel) /(1+median_rec_vel/constants.c)
-                  
+            
+            
     biscl_2 = biweight_scale(v_rest_vel)
 
+
     print(' rest velocity calculated from the biweight scale',(biscl_2/10**3))
-    
+
     sigma_clip=np.array(v_rest_vel)[(v_rest_vel>-3*biscl_2)&(v_rest_vel<3*biscl_2)]
-    sigma_cluster_z = biweight_scale(sigma_clip)
 
-    print(' rest velocity calculated from the biweight scale after sigma clip',(sigma_cluster_z/10**3))
+
+    sigma_cluster = biweight_scale(sigma_clip)/10**3
     
-    sigma=(sigma_cluster_z)/constants.c
+    print(' rest velocity calculated after clip',(sigma_cluster))
+
+    sigma_cluster_z=(sigma_cluster*10**3)/constants.c
+
+    new_cluster_z=np.median(zsp_R_200)
+
+    return(sigma_cluster_z,new_cluster_z,zph_R_200,zsp_R_200 )
+ 
+
+def  cluster_members(galaxy_ra_circle,galaxy_dec_circle,redshift_circle,sigma_cluster_z,new_cluster_z):
     
-    cluster_members=np.array(redshift_circle)[(redshift_circle>=new_cluster_z-3*(sigma))&(redshift_circle<=new_cluster_z+3*(sigma))]  
-         
-    foreground= np.array(redshift_circle)[((redshift_circle<new_cluster_z-3*(sigma))& (redshift_circle != cluster_members))]
+
+
+
+    #cluster_member=np.array(redshift_circle)[(redshift_circle>=new_cluster_z-3*(sigma_cluster_z))&(redshift_circle<=new_cluster_z+3*(sigma_cluster_z))]  
+        
+    cluster_member_3=((redshift_circle>=new_cluster_z-3*(sigma_cluster_z))&(redshift_circle<=new_cluster_z+3*(sigma_cluster_z)) )
+
+    cluster_member_5=((redshift_circle>=new_cluster_z-5*(sigma_cluster_z))&(redshift_circle<=new_cluster_z+5*(sigma_cluster_z)) )
+
+    # foreground= ((redshift_circle<new_cluster_z-3*(sigma_cluster_z))& (redshift_circle != cluster_member))
     
-    background= np.array(redshift_circle)[((redshift_circle>new_cluster_z+3*(sigma))& (redshift_circle != cluster_members))]
+    # background= ((redshift_circle>new_cluster_z+3*(sigma_cluster_z))& (redshift_circle != cluster_member))
+
+
                                        
-    print(' Number of cluster members',len(cluster_members) )
-    
-    
-    galaxy_ra_members=np.array(galaxy_ra_circle)[np.where(cluster_members)]
-    galaxy_dec_members=np.array(galaxy_dec_circle)[np.where(cluster_members)]
-    
-    galaxy_ra_foreground=np.array(galaxy_ra_circle)[np.where(foreground)]
-    galaxy_dec_foreground=np.array(galaxy_dec_circle)[np.where(foreground)]
-    
-    galaxy_ra_background=np.array(galaxy_ra_circle)[np.where(background)]
-    galaxy_dec_background=np.array(galaxy_dec_circle)[np.where(background)]
+    print(' Number of cluster members',len(cluster_member_3) )
 
-    
-    mask = (redshift_circle>=new_cluster_z-3*(sigma))&(redshift_circle<=new_cluster_z+3*(sigma))
+
+
+    galaxy_ra_members_3=np.array(galaxy_ra_circle)[cluster_member_3]
+    galaxy_dec_members_3=np.array(galaxy_dec_circle)[cluster_member_3]
+
+
+    galaxy_ra_members_5=np.array(galaxy_ra_circle)[cluster_member_5]
+    galaxy_dec_members_5=np.array(galaxy_dec_circle)[cluster_member_5]
+
+
+
 
     fig3 = plt.figure()
 
     ay3 = fig3.add_subplot(1,1,1, aspect='equal')
 
-    ay3.scatter(galaxy_ra_members,galaxy_dec_members,color='blue',alpha=0.5,marker="x",label='A2631 cluster members')
-    ay3.scatter(galaxy_ra_foreground,galaxy_dec_foreground,color='red',alpha=0.5,marker="o",label='A2631 cluster members')
-    ay3.scatter(galaxy_ra_background,galaxy_dec_background,color='yellow',alpha=0.5,marker="x",label='A2631 cluster members')
-    
-    plt.show()
+    ay3.scatter(galaxy_ra_members_3,galaxy_dec_members_3,color='blue',alpha=0.5,marker="x",label=r'Member galaxies at $-3 \sigma < z_{cluster} <  3 \sigma$')
+    # ay3.scatter(galaxy_ra_foreground,galaxy_dec_foreground,color='red',alpha=0.5,marker="o",label='A2631 foreground')
+    # ay3.scatter(galaxy_ra_background,galaxy_dec_background,color='black',alpha=0.5,marker="x",label='A2631 background')
+  
+    ay3.legend()
 
+    ay3.set_xlabel("RA in deg")
+    ay3.set_ylabel("DEC in deg")
+    plt.title("1.5 deg SDSS DR17 galaxies of Zwcl2341")
+    plt.show()
+    plt.savefig('zwcl_cluster_members.png')
     return(sigma_cluster_z,new_cluster_z)
+
 
 def zwcl_galaxy_distribution(galaxy_ra_new,galaxy_dec_new,redshift_circle,cluster_centre,R_200,zsp_min,zsp_max):
 
@@ -187,6 +208,10 @@ def zwcl_galaxy_distribution(galaxy_ra_new,galaxy_dec_new,redshift_circle,cluste
     H0=h*100
     cosmo = cp.FlatLambdaCDM(H0=h*100, Om0=0.30)
 
+    RA_DEC=SkyCoord(galaxy_ra_new,galaxy_dec_new,frame='icrs',unit=(u.deg,u.deg))
+
+    ra_radian=RA_DEC.ra.radian
+    dec_radian=RA_DEC.dec.radian
 
     sc = SkyCoord(ra_radian, dec_radian, unit='rad', representation_type='unitspherical')
     cartesian=sc.cartesian
@@ -257,105 +282,13 @@ def zwcl_galaxy_distribution(galaxy_ra_new,galaxy_dec_new,redshift_circle,cluste
     return(sigma_cluster_z,new_cluster_z)
 
 
-def velocity_dispersion(galaxy_ra,galaxy_dec,zsp,zph,cluster_centre,R_200,zsp_min,zsp_max):
-    
 
 
-    redshift=np.array(zsp)
-    
-    def histogram(sample,bins,color):
-        n, bins, patches = plt.hist(sample, bins=bins, color=color, alpha=0.1, rwidth=0.85)
-        cluster_z=bins[np.argmax(n)]
-        return cluster_z
-    
-    cluster_centre_ra_radian=cluster_centre.ra.radian
-    cluster_centre_dec_radian=cluster_centre.dec.radian
-
-    cluster_centre=[cluster_centre.ra.value,cluster_centre.dec.value]
-    
-    ra_5Mpc_circle=[]
-    dec_5Mpc_circle=[]
-    zsp_R_200=[]
-    zph_R_200=[]
-    for i in range(len(galaxy_ra)):
-        if np.sqrt((galaxy_ra[i]-cluster_centre[0])**2+(galaxy_dec[i]-cluster_centre[1])**2)<= R_200:
-            ra_5Mpc_circle.append(galaxy_ra[i])
-            dec_5Mpc_circle.append(galaxy_dec[i])
-            zsp_R_200.append(redshift[i])
-            zph_R_200.append(zph[i])
-            
-            
-
-    print('arcmin circle',len(zsp_R_200))
-    
-    new_cluster_z=histogram(zsp_R_200,50,'#0504ab')
-
-    print('new cluster z:' ,new_cluster_z)  
-
-    R_200_members=[]
-
-    for i in range(len(zsp_R_200)):
-        if (zsp_R_200[i] >= new_cluster_z - 0.015) and (zsp_R_200[i] <= new_cluster_z + 0.015):
-            R_200_members.append(zsp_R_200[i]) 
-    print(max(R_200_members),min(R_200_members),len(R_200_members))
-
-    #Cluster members
-    
-    v_rec_vel=np.array(np.array(R_200_members)*constants.c)
-    
-
-    median_rec_vel=stats.median(v_rec_vel)
-    
-    v_rest_vel=np.array(v_rec_vel - median_rec_vel) /(1+median_rec_vel/constants.c)
-            
-            
-    biscl_2 = biweight_scale(v_rest_vel)
+def redshift_plots(zsp,zph,sigma_cluster_z,new_cluster_z,mag_1,mag_2,mag1_filter,mag2_filter):
 
 
-    sigma_clip=np.array(v_rest_vel)[(v_rest_vel>-3*biscl_2)&(v_rest_vel<3*biscl_2)]
-
-    print(' rest velocity calculated from the biweight scale',(biscl_2/10**3))
-
-    sigma_cluster_z = biweight_scale(sigma_clip)/10**3
-    
-    sigma=(sigma_cluster_z*10**3)/constants.c
-
-    cluster_members=np.array(redshift)[(redshift>new_cluster_z-3*(sigma))&(redshift<new_cluster_z+3*(sigma))]  
-                                            
-    print(' Number of cluster members',len(cluster_members) )
-    
-    galaxy_ra_members=np.array(galaxy_ra)[np.where(cluster_members)]
-    galaxy_dec_members=np.array(galaxy_dec)[np.where(cluster_members)]
-    
-
-    plt.scatter(galaxy_ra, galaxy_dec,color='black', alpha=0.3)
-    plt.scatter(galaxy_ra_members,galaxy_dec_members,color='blue',alpha=0.5,marker="x")
-    plt.xlim(min(galaxy_ra),max(galaxy_ra))
-    plt.ylim(min(galaxy_dec),max(galaxy_dec))
-    plt.xlabel("RA in deg")
-    plt.ylabel("DEC in deg")
-    plt.title("1.5 deg SDSS DR17 galaxies of Zwcl 2341" + " " + str(zsp_min) + "<" + "z" + "<" +str(zsp_max))
-
-    circle=plt.Circle((cluster_centre[0], cluster_centre[1]), R_200, edgecolor= 'blue',
-    facecolor='None', linewidth=2, alpha=1 ,ls = 'dashed') #, )
-    #plt.patch(circle)
-    plt.text(0,0, "R_200", ha="left", va="top",fontsize=10)
-   
-    
-    print(' rest velocity calculated from the biweight scale after sigma clip',sigma_cluster_z )
-
-    plt.show() 
-    
-    return(sigma_cluster_z,new_cluster_z,zph_R_200,zsp_R_200 )
- 
-
-
-
-def redshift_plots(zsp,zph,sigma_cluster_z,new_cluster_z,mag_1,mag_2,mag_filter):
-
-
-    zph_filter=np.array(zph)[(mag_1 < mag_filter) & (mag_2 < mag_filter) ]
-    zsp_filter=np.array(zsp)[(mag_1 < mag_filter) & (mag_2 < mag_filter) ]
+    zph_filter=np.array(zph)[(mag_1 < mag1_filter) & (mag_2 < mag2_filter) ]
+    zsp_filter=np.array(zsp)[(mag_1 < mag1_filter) & (mag_2 < mag2_filter) ]
 
     zph_nofilter=np.array(zph)
     zsp_nofilter=np.array(zsp)
@@ -378,7 +311,7 @@ def redshift_plots(zsp,zph,sigma_cluster_z,new_cluster_z,mag_1,mag_2,mag_filter)
     
     zsp_minus_zph_after = np.array(zsp_final-zph_final)[np.where((zph_final>0.2)&(zph_final<0.4))]
     
-    
+
     FD=(100-(len(target_region_nofilter)-len(target_region_filter))/(len(target_region_nofilter))*100)
     
     
@@ -387,45 +320,78 @@ def redshift_plots(zsp,zph,sigma_cluster_z,new_cluster_z,mag_1,mag_2,mag_filter)
     
     fraction_outlier=(perc_outlier_after/perc_outlier_before)*100
     #(zsp_minus_zph<0.05)&(zsp_minus_zph>-0.05)
-    mag_1=f'{mag_1=}'.split('=')[0]
-    mag_2=f'{mag_2=}'.split('=')[0]
+    # mag_1=f'{mag_1}'.split('=')[0]
+    # mag_2=f'{mag_2}'.split('=')[0]
    
     print(len(zph_final),'length spectro and photo array')
     
 
     fig = plt.figure(figsize=(15, 7))
-    plt.subplot(122)
-    plt.scatter(zph_final,zsp_final)
-    plt.plot(zsp_final, zsp_final, 'k-', lw=2,label='one-to-one')
-    plt.axhline(y=0.25, color='r', linestyle='-')
-    plt.axhline(y=0.30, color='r', linestyle='-')
-    plt.axvline(x=0.20, color='r', linestyle='-')
-    plt.axvline(x=0.40, color='r', linestyle='-')
-    plt.annotate("success rate = {:.3f}%".format(FD), (0.6, 0.9))
-    plt.title('photo z vs spect z for galaxies at 1 > z > 0 with' + ' ' + str(mag_1) + '< 20,' +' '+ str(mag_2) + '< 20')
 
-    plt.xlabel('photometric redshift')
-    plt.ylabel('spectroscopic redshift')
-    plt.xlim(0,1)
-    plt.ylim(0,1)
     # plt.xlim(new_cluster_z-(30*(sigma_z)),new_cluster_z+(30*(sigma_z)))
     # plt.ylim(new_cluster_z-(30*(sigma_z)),new_cluster_z+(30*(sigma_z)))
 
-
-    plt.subplot(121)
+    plt.subplot(221)
     plt.scatter(zph_final_nofilter,zsp_final_nofilter)
     plt.plot(zsp_final_nofilter, zsp_final_nofilter, 'k-', lw=2,label='one-to-one')
-    plt.axhline(y=0.25, color='r', linestyle='-')
-    plt.axhline(y=0.30, color='r', linestyle='-')
-    plt.axvline(x=0.20, color='r', linestyle='-')
-    plt.axvline(x=0.40, color='r', linestyle='-')
-    plt.title('photo z vs spect z for galaxies at 1 > z > 0')
+    plt.axhline(y=new_cluster_z-5*sigma_cluster_z, color='r', linestyle='-')
+    plt.axhline(y=new_cluster_z+5*sigma_cluster_z, color='r', linestyle='-')
+    plt.axvline(x=0.25, color='r', linestyle='-')
+    plt.axvline(x=0.34, color='r', linestyle='-')
+    plt.title('photo z vs spec z for galaxies at 1 > z > 0')
     #plt.title('Outlier ratio is {}'.format(mag_1))
     plt.xlabel('photometric redshift')
     plt.ylabel('spectroscopic redshift')
     plt.xlim(0,1)
     plt.ylim(0,1)
+
+
+    plt.subplot(222)
+    plt.scatter(zph_final_nofilter,zsp_final_nofilter)
+    plt.plot(zsp_final_nofilter, zsp_final_nofilter, 'k-', lw=2,label='one-to-one')
+    plt.axhline(y=new_cluster_z-5*sigma_cluster_z, color='r', linestyle='-')
+    plt.axhline(y=new_cluster_z+5*sigma_cluster_z, color='r', linestyle='-')
+    plt.axvline(x=0.25, color='r', linestyle='-')
+    plt.axvline(x=0.34, color='r', linestyle='-')
+    plt.title('Zoom in of photo z vs spec z for galaxies at 1 > z > 0 showing the redshift sample of interest' )
+    #plt.title('Outlier ratio is {}'.format(mag_1))
+    plt.xlabel('photometric redshift')
+    plt.ylabel('spectroscopic redshift')
+    plt.xlim(0.1,0.5)
+    plt.ylim(0.2,0.35)
+
+    plt.subplot(223)
+    plt.scatter(zph_final,zsp_final)
+    plt.plot(zsp_final, zsp_final, 'k-', lw=2,label='one-to-one')
+    plt.axhline(y=new_cluster_z-5*sigma_cluster_z, color='r', linestyle='-')
+    plt.axhline(y=new_cluster_z+5*sigma_cluster_z, color='r', linestyle='-')
+    plt.axvline(x=0.25, color='r', linestyle='-')
+    plt.axvline(x=0.34, color='r', linestyle='-')
+    plt.title('photo z vs spec z for galaxies at 1 > z > 0 after magnitude filter')
+    #plt.title('Outlier ratio is {}'.format(mag_1))
+    plt.xlabel('photometric redshift')
+    plt.ylabel('spectroscopic redshift')
+    plt.xlim(0,1)
+    plt.ylim(0,1)
+
+
+    plt.subplot(224)
+    plt.scatter(zph_final,zsp_final)
+    plt.plot(zsp_final, zsp_final, 'k-', lw=2,label='one-to-one')
+    plt.axhline(y=new_cluster_z-5*sigma_cluster_z, color='r', linestyle='-')
+    plt.axhline(y=new_cluster_z+5*sigma_cluster_z, color='r', linestyle='-')
+    plt.axvline(x=0.25, color='r', linestyle='-')
+    plt.axvline(x=0.34, color='r', linestyle='-')
+    plt.title('Zoom in of photo z vs spec z for galaxies at 1 > z > 0 showing the redshift sample of interest after magnitude filter')
+    #plt.title('Outlier ratio is {}'.format(mag_1))
+    plt.xlabel('photometric redshift')
+    plt.ylabel('spectroscopic redshift')
+    plt.xlim(0.1,0.5)
+    plt.ylim(0.2,0.35)
+
     plt.show()
+
+
     
 
     fig = plt.figure(figsize=(15, 7))
@@ -434,7 +400,7 @@ def redshift_plots(zsp,zph,sigma_cluster_z,new_cluster_z,mag_1,mag_2,mag_filter)
 
     plt.hist(zsp_minus_zph_before, bins=50)
     plt.plot(x, norm.pdf(x, np.mean(zsp_minus_zph_before), np.std(zsp_minus_zph_before)))
-    plt.title('Distribution of (photo z - spect z) for galaxies at 1 > z > 0')
+    plt.title('Distribution of (photo z - spec z) for galaxies at 1 > z > 0')
     plt.vlines(np.median(zsp_minus_zph_before), 0, 1)
     plt.subplot(122)
     x = np.linspace(min(zsp_minus_zph_after), max(zsp_minus_zph_after), num=100)
@@ -443,7 +409,7 @@ def redshift_plots(zsp,zph,sigma_cluster_z,new_cluster_z,mag_1,mag_2,mag_filter)
     plt.plot([], [], ' ', label="fraction_outlier = {:.3f}%".format(fraction_outlier))
     plt.hist(zsp_minus_zph_after, bins=50)
     plt.plot(x, norm.pdf(x, np.mean(zsp_minus_zph_after), np.std(zsp_minus_zph_after)))
-    plt.title('Distribution of  (photo z - spect z) for galaxies at 1 > z > 0 with' +' '+  str(mag_1) + '< 20,' +' '+ str(mag_2) + '< 20')
+    plt.title(f"Distribution of  (photo z - spec z) for galaxies at 1 > z > 0 with + 'mag_1 + < {mag1_filter}, + mag_2 + < {mag2_filter}")
     plt.vlines(np.median(zsp_minus_zph_after), 0, 1)
     plt.legend()
     plt.show()
@@ -500,20 +466,20 @@ def RA_DEC_seperation(cross_match_galaxy_ra_radio,cross_match_galaxy_dec_radio,c
     bin_RA_centre=(bins[np.argmax(n)]+bins[np.argmax(n)+1])/2
 
 
-    x = np.linspace(-10, 10, num=100)
+    x = np.linspace(-3, 3, num=100)
 
     fig = plt.figure(figsize=(13, 5))
     plt.subplot(121)
     plt.hist(RA_sep-bin_RA_centre, bins='auto', density=True)
     plt.plot(x, norm.pdf(x, np.mean(RA_sep-bin_RA_centre), np.std(RA_sep-bin_RA_centre)))
     plt.xlabel('RA sep (arcsec)')
-    plt.title("RA seperation distance distribution between radio and optical")
+    plt.title("RA seperation distance distribution between SDSS and DeCALS for Zwcl2341")
     plt.subplot(122)
     
     plt.hist(DEC_sep-bin_DEC_centre, bins='auto', density=True)
     plt.plot(x, norm.pdf(x, np.mean(DEC_sep-bin_DEC_centre), np.std(DEC_sep-bin_DEC_centre)))
     plt.xlabel('DEC sep (arcsec)')
-    plt.title("DEC seperation distance distribution between radio and optical")
+    plt.title("DEC seperation distance distribution between SDSS and DeCALS for Zwcl2341")
 
     plt.show()
 
