@@ -21,8 +21,9 @@ import pandas as pd
 import csv
 from scipy.stats import norm
 from scipy.optimize import curve_fit
+cosmo = FlatLambdaCDM(H0=70, Om0=0.27)
 
-def circle(galaxy_ra,galaxy_dec,zsp,cluster_centre,zsp_min,zsp_max,search_radius):
+def circle(cluster_name,galaxy_ra,galaxy_dec,zsp,cluster_centre,zsp_min,zsp_max,search_radius):
 
     galaxy_ra_circle=[]
     galaxy_dec_circle=[]
@@ -48,14 +49,14 @@ def circle(galaxy_ra,galaxy_dec,zsp,cluster_centre,zsp_min,zsp_max,search_radius
 
     plt.xlabel("RA in deg")
     plt.ylabel("DEC in deg")
-    plt.title("1.5 deg SDSS DR17 galaxies of Zwcl 2341")
+    plt.title("1.5 deg SDSS DR17 galaxies of " + cluster_name)
 
     
 
     return(galaxy_ra_circle,galaxy_dec_circle,redshift_circle)
 
 
-def redshift_distribution(galaxy_ra_circle,galaxy_dec_circle,redshift_circle,cluster_centre,R_200,zsp_min,zsp_max):
+def redshift_distribution(cluster_name,galaxy_ra_circle,galaxy_dec_circle,redshift_circle,cluster_centre,R_200,zsp_min,zsp_max):
 
     zsp_min_1=0
     zsp_max_1=1
@@ -73,8 +74,8 @@ def redshift_distribution(galaxy_ra_circle,galaxy_dec_circle,redshift_circle,clu
    
     ax1.set_xlabel('Redshift',fontsize=15)
     ax1.set_ylabel('Number of galaxies',fontsize=15)
-    ax1.set_title("SDSS spectroscopic redshift distribution of galaxies within 1.5 deg of Zwcl 2341")
-    plt.savefig('zwcl_redshift_distribution.png')
+    ax1.set_title("SDSS spectroscopic redshift distribution of galaxies within 1.5 deg of " + cluster_name)
+    plt.savefig(cluster_name +  '_redshift_distribution.png')
    
 
 def velocity_dispersion(galaxy_ra,galaxy_dec,zsp,zph,cluster_centre,R_200,zsp_min,zsp_max):
@@ -153,10 +154,9 @@ def velocity_dispersion(galaxy_ra,galaxy_dec,zsp,zph,cluster_centre,R_200,zsp_mi
     return(sigma_cluster_z,new_cluster_z,zph_R_200,zsp_R_200 )
  
 
-def  cluster_members(galaxy_ra_circle,galaxy_dec_circle,redshift_circle,sigma_cluster_z,new_cluster_z):
+def  cluster_members(cluster_name,galaxy_ra_circle,galaxy_dec_circle,redshift_circle,sigma_cluster_z,new_cluster_z):
     
-
-
+    cluster_centre=SkyCoord(str(354.41916666667 ), str(0.27666666666667), frame='icrs',unit=(u.deg,u.deg))
 
     #cluster_member=np.array(redshift_circle)[(redshift_circle>=new_cluster_z-3*(sigma_cluster_z))&(redshift_circle<=new_cluster_z+3*(sigma_cluster_z))]  
         
@@ -181,24 +181,26 @@ def  cluster_members(galaxy_ra_circle,galaxy_dec_circle,redshift_circle,sigma_cl
     galaxy_ra_members_5=np.array(galaxy_ra_circle)[cluster_member_5]
     galaxy_dec_members_5=np.array(galaxy_dec_circle)[cluster_member_5]
 
+    fig, ax = plt.subplots()
+    plt.scatter(galaxy_ra_members_3,galaxy_dec_members_3,color='blue',alpha=0.5,marker="x",label=r'Member galaxies at $-3 \sigma < z_{cluster} <  3 \sigma$')
 
-
-
-    fig3 = plt.figure()
-
-    ay3 = fig3.add_subplot(1,1,1, aspect='equal')
-
-    ay3.scatter(galaxy_ra_members_3,galaxy_dec_members_3,color='blue',alpha=0.5,marker="x",label=r'Member galaxies at $-3 \sigma < z_{cluster} <  3 \sigma$')
-    # ay3.scatter(galaxy_ra_foreground,galaxy_dec_foreground,color='red',alpha=0.5,marker="o",label='A2631 foreground')
-    # ay3.scatter(galaxy_ra_background,galaxy_dec_background,color='black',alpha=0.5,marker="x",label='A2631 background')
   
-    ay3.legend()
+    plt.legend()
 
-    ay3.set_xlabel("RA in deg")
-    ay3.set_ylabel("DEC in deg")
-    plt.title("1.5 deg SDSS DR17 galaxies of Zwcl2341")
+    plt.xlabel("RA in deg")
+    plt.ylabel("DEC in deg")
+    plt.title("1.5 deg SDSS DR17 galaxies of " + cluster_name)
+    circle=plt.Circle((cluster_centre.ra.value, cluster_centre.dec.value), R_200, edgecolor= 'red',facecolor='None', linewidth=2, alpha=1 ,ls = 'dashed') #, )
+    plt.gca().add_patch(circle)
+
+    ax.add_patch(circle)
+    ax.text(0,0, "R_200", ha="left", va="top",fontsize=10)
+    plt.savefig('A2631_cluster_members.png')
     plt.show()
-    plt.savefig('zwcl_cluster_members.png')
+
+
+
+
     return(sigma_cluster_z,new_cluster_z)
 
 
@@ -284,7 +286,7 @@ def zwcl_galaxy_distribution(galaxy_ra_new,galaxy_dec_new,redshift_circle,cluste
 
 
 
-def redshift_plots(zsp,zph,sigma_cluster_z,new_cluster_z,mag_1,mag_2,mag1_filter,mag2_filter):
+def redshift_plots(cluster_name,zsp,zph,sigma_cluster_z,new_cluster_z,mag_1,mag_2,mag1_filter,mag2_filter):
 
 
     zph_filter=np.array(zph)[(mag_1 < mag1_filter) & (mag_2 < mag2_filter) ]
@@ -338,7 +340,7 @@ def redshift_plots(zsp,zph,sigma_cluster_z,new_cluster_z,mag_1,mag_2,mag1_filter
     plt.axhline(y=new_cluster_z+5*sigma_cluster_z, color='r', linestyle='-')
     plt.axvline(x=0.25, color='r', linestyle='-')
     plt.axvline(x=0.34, color='r', linestyle='-')
-    plt.title('photo z vs spec z for galaxies at 1 > z > 0')
+    plt.title(cluster_name + " photo z vs spec z for galaxies at 1 > z > 0")
     #plt.title('Outlier ratio is {}'.format(mag_1))
     plt.xlabel('photometric redshift')
     plt.ylabel('spectroscopic redshift')
@@ -367,7 +369,7 @@ def redshift_plots(zsp,zph,sigma_cluster_z,new_cluster_z,mag_1,mag_2,mag1_filter
     plt.axhline(y=new_cluster_z+5*sigma_cluster_z, color='r', linestyle='-')
     plt.axvline(x=0.25, color='r', linestyle='-')
     plt.axvline(x=0.34, color='r', linestyle='-')
-    plt.title('photo z vs spec z for galaxies at 1 > z > 0 after magnitude filter')
+    plt.title(cluster_name + "photo z vs spec z for galaxies at 1 > z > 0 after magnitude filter")
     #plt.title('Outlier ratio is {}'.format(mag_1))
     plt.xlabel('photometric redshift')
     plt.ylabel('spectroscopic redshift')
@@ -622,4 +624,19 @@ def SDSS_DeCALS(ivar,flux_1,mag1_err,band):
             
         plt.show()
         
+        
+
+def R_200_to_deg(distance_Mpc,redshift):
+            
+    def radians_to_degrees(radians):
+        degrees = radians * (180 / math.pi)
+        return degrees
+
+    d_A = cosmo.angular_diameter_distance(z=redshift)
+
+    theta_radian = distance_Mpc/d_A
+
+    R_200=radians_to_degrees(theta_radian.value)
+
+    return(R_200)
         
