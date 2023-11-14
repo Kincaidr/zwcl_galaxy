@@ -37,14 +37,14 @@ import glob
 from dl import authClient as ac, queryClient as qc
 from dl.helpers.utils import convert
 from getpass import getpass
-from astropy.table import Table, Column
+from astropy.table import Table, Column, join
 from astromatch import Catalogue
 from astromatch import Match
 from mocpy import MOC
 
 def LR(folder_path,radio_cat,optical_cat,cluster_centre,cluster_name):
 
-    sdss_mags = [ 'mag_g','mag_r','mag_z']#,'mag_w1','mag_w2','mag_w3']
+    
     def fix_col_radio(radio_cat):
     
         radio = fits.open(radio_cat)
@@ -60,6 +60,7 @@ def LR(folder_path,radio_cat,optical_cat,cluster_centre,cluster_name):
         fits.writeto(radio_cat+'_fix.fits',data=data,overwrite=True)
 
         return(radio_cat+'_fix.fits')
+    
 
     def fix_col_optical_HSC(optical_cat):
 
@@ -92,28 +93,42 @@ def LR(folder_path,radio_cat,optical_cat,cluster_centre,cluster_name):
 
     def fix_col_optical_DeCALS(optical_cat):
 
+        def flux2mag(flux):
+                return (22.5-2.5*np.log10(flux))
 
         t=Table.read(optical_cat)
-        ra_err1=1/np.sqrt(t['ra_ivar'])
-        dec_err1=1/np.sqrt(t['dec_ivar'])
+        #import IPython;IPython.embed()
 
-        ra_err=Column(name='ra_err', data=ra_err1)
-        dec_err=Column(name='dec_err', data=dec_err1)
-
-        t.add_column( ra_err)
-        t.add_column( dec_err)
-        t.write(optical_cat,overwrite=True)
-
-        return(optical_cat)
+        mag_g=Column(name='mag_g', data=flux2mag(t['FLUX_G']))
+        mag_r=Column(name='mag_r', data=flux2mag(t['FLUX_R']))
+        mag_i=Column(name='mag_i', data=flux2mag(t['FLUX_I']))
 
 
-    radio=fix_col_radio(radio_cat)
+        # t.add_column( mag_g)
+        # t.add_column( mag_r)
+        # t.add_column( mag_i)
+        
+
+        # mag_g=flux2mag(t['FLUX_G'])
+        # mag_r=flux2mag(t['FLUX_R'])
+        # mag_i=flux2mag(t['FLUX_I'])
+
+        return(t)
 
 
-    try:
-         optical=fix_col_optical_DeCALS(optical_cat)
-    except ValueError:
-         optical=optical_cat
+    radio=radio_cat
+    optical=optical_cat
+
+
+    # try:
+    #      optical=fix_col_optical_HSC(optical_cat)
+    # except ValueError:
+    #      optical=optical_cat
+
+    #import IPython;IPython.embed()
+
+    sdss_mags = [ 'mag_g','mag_r','mag_i']#,'mag_w1','mag_w2','mag_w3']
+    
 
 
     search_radius_a = 2*u.deg
@@ -129,34 +144,79 @@ def LR(folder_path,radio_cat,optical_cat,cluster_centre,cluster_name):
     )
 
 
+
     rcat = Catalogue(radio,name='radio_cat',id_col='Source_id',coord_cols=['RA','DEC'],poserr_cols=None ,poserr_type='circle',area=moc_xxl) #['E_RA','E_DEC']
 
-    ocat = Catalogue(optical,name='optical_cat',id_col='objid',coord_cols=['ra','dec'],poserr_cols=None,poserr_type='circle',area=moc_xxl,mag_cols=sdss_mags) #['ra_err','dec_err']
+    ocat = Catalogue(optical,name='optical_cat',id_col='OBJID',coord_cols=['RA','DEC'],poserr_cols=None,poserr_type='circle',area=moc_xxl,mag_cols=sdss_mags) #['ra_err','dec_err']
 
     rcat.poserr.add_syserr(0.4*u.arcsec)
     ocat.poserr.add_syserr(0.4*u.arcsec)
 
     xm = Match(rcat, ocat)
 
-    match_results_lr = xm.run(method='lr', radius=3.0*u.arcsec)
+    match_results_lr = xm.run(method='lr', radius=2.0*u.arcsec)
 
 
     # match_results=xm.run(method='nway', radius=3.0*u.arcsec, use_mags=True)
     # match_results=xm.run(method='lr', radius=3.0*u.arcsec, use_mags=True)
  
-    cutoff=0.5
-    xm.set_best_matchs()
+    #cutoff=0.5
+    xm.set_best_matchs(cutoff=0.5)
 
     best_matches = xm.get_matchs(match_type='best') 
 
     print('best_matches',len(best_matches))
 
+    #LR=lr_stats['cutoff'][np.nanargmax(lr_stats['CR'])]
+
 
     lr_stats = xm.stats()
 
-    LR=lr_stats['cutoff'][np.nanargmax(lr_stats['CR'])]
+    dist=best_matches['Separation_radio_cat_optical_cat']
 
-    # import pdb; pdb.set_trace()
+    n, bins = np.histogram(dist, bins=30)
+
+    bin_centers = (bins[1:] + bins[:-1]) / 2
+
+    n,bins,_=plt.hist(dist, bins=bin_centers,alpha=0.7)
+
+    x=np.linspace(0,2,1000)
+    def gauss(x, mu, sigma, A):
+     return A*np.exp(-(x-mu)**2/2/sigma**2)
+    
+    expected = ( .2, .7, 1)
+
+    # params, cov = curve_fit(gauss, bins, n, expected)
+
+    # plt.plot(x, gauss(dist, *params), color='red', lw=3, label='model')
+
+
+    #import IPython;IPython.embed()
+
+
+
+
+
+    # optical_id_best=np.where(best_matches['SRCID_optical_cat'].value)[0]
+
+    # radio_id_best=np.where(best_matches['SRCID_radio_cat'].value)[0]
+
+    # optical = fits.open(optical_cat)
+    # data_optical=optical[1].data
+
+    # t=Table(data_optical)[optical_id_best]
+
+    # t.write(optical_cat.replace('_new.fits','_LR.fits'),overwrite=True)
+
+    # radio = fits.open(radio_cat)
+    # data_radio=optical[1].data
+
+    # t=Table(data_radio)[radio_id_best]
+
+    # t.write(radio_cat.replace('_radio_cat.fits','_radio_LR.fits'),overwrite=True)
+
+    
+    
 
     # dra, ddec = xm.offset('optical_cat','radio_cat', match_type='best')
     # x = np.linspace(-10, 10, num=100)
@@ -174,7 +234,7 @@ def LR(folder_path,radio_cat,optical_cat,cluster_centre,cluster_name):
     # plt.xlabel('DDEC / arcsec')
 
 
-    fig = plt.figure(figsize=(13, 5))
+    fig = plt.figure(figsize=(13, 7))
 
 
     plt.plot(lr_stats['cutoff'], (1 - lr_stats['error_rate']) * 100, '--r', lw=3)
@@ -188,15 +248,18 @@ def LR(folder_path,radio_cat,optical_cat,cluster_centre,cluster_name):
     # Using 'r' for a red line, you can change the color as needed
     plt.plot(lr_stats['cutoff'], lr_stats['completeness']*100, lw=3)
     ax2.set_ylabel('completeness (%)',color='blue',fontsize=20)
-    plt.axvline(x=cutoff, color='black', linestyle='--')
+    plt.axvline(x=0.5, color='black', linestyle='--')
     plt.yticks(fontsize=12)
-    #plt.tight_layout()
+    plt.tight_layout()
     plt.xlim(0,1)
-    plt.title(cluster_name,fontsize=20)
+    #plt.title(cluster_name,fontsize=17)
+
     plt.savefig(folder_path+cluster_name + '_LR_ratio.pdf')
     plt.show()
 
-def DeCALS_query(folder_path,cluster_name,cluster_centre,output_filename_DeCALS):
+
+
+def DeCALS_query(folder_path,cluster_name,cluster_centre):
 
     
     slice_size=50000
@@ -219,12 +282,12 @@ def DeCALS_query(folder_path,cluster_name,cluster_centre,output_filename_DeCALS)
         # Construct the SQL query with the current offset and limit (slice size)
         sql_query = f"""
         SELECT t.ra,t.dec,t.ra_ivar,t.dec_ivar,t.flux_w1,t.flux_w2,t.flux_w3,t.flux_w4,t.flux_ivar_w1, t.flux_ivar_w2, t.flux_ivar_w3,
-        t.flux_ivar_w4, t.flux_g, t.flux_r,t.flux_z,  t.flux_ivar_g, t.flux_ivar_r,t.flux_ivar_z, t.mag_g, t.mag_r, t.mag_z, t.mag_w1, t.mag_w2,
+        t.flux_ivar_w4, t.flux_g, p.apflux_g_2, t.flux_r, p.apflux_r_2, t.flux_z, p.apflux_z_2,  t.flux_ivar_g, t.flux_ivar_r,t.flux_ivar_z, t.mag_g, t.mag_r, t.mag_z, t.mag_w1, t.mag_w2,
         t.mag_w3,t.mag_w4,t.objid, t.type, t.snr_g, t.snr_r, t.snr_z, t.snr_w1, t.snr_w2, t.snr_w3, t.snr_w4, t.w1_w2, t.w2_w3, t.w3_w4, pz.ls_id, pz.objid, pz.z_phot_mean,
         pz.z_phot_median, pz.z_spec, pz.z_phot_l68, pz.z_phot_u68, pz.z_phot_l95, pz.z_phot_u95,pz.survey
-            FROM ls_dr9.photo_z AS pz, ls_dr9.tractor AS t
+            FROM ls_dr9.photo_z AS pz, ls_dr9.tractor AS t, ls_dr9.apflux AS p
         WHERE Q3C_RADIAL_QUERY(t.ra, t.dec, {cluster_centre.ra.value}, {cluster_centre.dec.value}, 2)
-        AND t.ls_id = pz.ls_id
+        AND t.ls_id = pz.ls_id AND pz.ls_id=p.ls_id
         LIMIT {slice_size} OFFSET {offset}
         """
         t1 = time.time()
@@ -260,6 +323,138 @@ def DeCALS_query(folder_path,cluster_name,cluster_centre,output_filename_DeCALS)
 
             print('table '+ output_filename + ' has been written ')
 
+def stack_table(folder_path,cluster_name ):
+
+    all_query_tables=glob.glob('query_result_*.fits')
+    all_query_tables.sort()
+    #table_list=[]
+    stack = None
+    for i, query_table in enumerate(all_query_tables):
+        print(i, len(all_query_tables), query_table)
+        table = Table.read(query_table, format='fits')
+        if stack:
+            stack = vstack([stack, table])
+        else:
+            stack = table
+        stack.write(folder_path+cluster_name+'_stacked_table.fits', format='fits', overwrite=True)
+
+    catalog = Table.read(folder_path+cluster_name+'_stacked_table.fits')
+
+    for column in catalog.keys():
+    # Check if the column dtype starts with 'U' (Unicode string)
+        if catalog[column].dtype.kind in ['U', 'S']:
+            try:
+            # Convert the column to 'float64'
+                catalog[column] = catalog[column].astype('float64')
+            except ValueError:
+                continue
+
+        catalog.write(cluster_name+'_DeCALS.fits',format='fits',overwrite=True)
+
+
+
+def HSC_query(folder_path,cluster_name,DeCALS_catalogue_fits):
+
+    HSC=cluster_name
+#   SELECT
+#          f.object_id
+#         , f.ra
+#         , f.dec
+#         , f.g_cmodel_flux
+#         , f.g_cmodel_fluxerr
+#         , f.r_cmodel_flux
+#         , f.r_cmodel_fluxerr
+#         , f.i_cmodel_flux
+#         , f.i_cmodel_fluxerr
+#         , f.z_cmodel_flux
+#         , f.z_cmodel_fluxerr
+#         , f.y_cmodel_flux
+#         , f.y_cmodel_fluxerr
+#         , f.g_cmodel_mag
+#         , f.g_cmodel_magerr
+#         , f.r_cmodel_mag
+#         , f.r_cmodel_magerr
+#         , f.i_cmodel_mag
+#         , f.i_cmodel_magerr
+#         , f.z_cmodel_mag
+#         , f.z_cmodel_magerr
+#         , f.y_cmodel_mag
+#         , f.y_cmodel_magerr
+#         , w.object_id
+#         , w.photoz_median
+#         , w.photoz_err68_min
+#         , w.photoz_err68_max
+#         , w.photoz_mean
+#         , w.sfr
+#         , w.sfr_err68_min
+#         , w.sfr_err68_max
+#         , w.stellar_mass
+#         , w.stellar_mass_err68_min
+#         , w.stellar_mass_err68_max
+#         , p.g_apertureflux_15_mag
+#         , p.g_apertureflux_15_magerr
+#         , p.r_apertureflux_15_mag
+#         , p.r_apertureflux_15_magerr
+#         , p.i_apertureflux_15_mag
+#         , p.i_apertureflux_15_magerr
+#         , p.object_id
+#     FROM
+#             pdr3_wide.forced as f
+#         JOIN
+#             pdr3_wide.photoz_mizuki as w
+#         ON
+#             f.object_id = w.object_id
+#         JOIN
+#             pdr3_wide.forced3 as p
+#         ON
+#             f.object_id = p.object_id
+#         WHERE conesearch(coord, 354.4191, 0.2766, 7200.0)
+
+
+
+#   SELECT
+#          f.object_id
+#         , f.ra
+#         , f.dec
+#         , f.g_cmodel_flux
+#         , f.g_cmodel_fluxerr
+#         , f.r_cmodel_flux
+#         , f.r_cmodel_fluxerr
+#         , f.i_cmodel_flux
+#         , f.i_cmodel_fluxerr
+#         , f.z_cmodel_flux
+#         , f.z_cmodel_fluxerr
+#         , f.y_cmodel_flux
+#         , f.y_cmodel_fluxerr
+#         , f.g_cmodel_mag
+#         , f.g_cmodel_magerr
+#         , f.r_cmodel_mag
+#         , f.r_cmodel_magerr
+#         , f.i_cmodel_mag
+#         , f.i_cmodel_magerr
+#         , f.z_cmodel_mag
+#         , f.z_cmodel_magerr
+#         , f.y_cmodel_mag
+#         , f.y_cmodel_magerr
+#         , w.object_id
+#         , w.photoz_median
+#         , w.photoz_err68_min
+#         , w.photoz_err68_max
+#         , w.photoz_mean
+#         , w.sfr
+#         , w.sfr_err68_min
+#         , w.sfr_err68_max
+#         , w.stellar_mass
+#         , w.stellar_mass_err68_min
+#         , w.stellar_mass_err68_max
+#     FROM
+#             pdr3_wide.forced as f
+#         JOIN
+#             pdr3_wide.photoz_mizuki as w
+#         ON
+#             f.object_id = w.object_id
+#         WHERE conesearch(coord, 354.4191, 0.2766, 7200.0)
+        
 
 
 def RA_DEC_seperation_optical(folder_path,cluster_name,DeCALS_catalogue_fits):
@@ -398,10 +593,33 @@ def RA_DEC_seperation_radio(folder_path,cluster_name,radio_DeCALS_catalogue):
     plt.show()
 
 
+def radio_redshift_DeCLAS(folder_path,cluster_name,radio_DeCALS_catalogue):
+
+    radio_DeCALS_catalogue_fits = fits.open(radio_DeCALS_catalogue)
+    radio_DeCALS_cat=radio_DeCALS_catalogue_fits[1].data
+    
+    z=radio_DeCALS_cat['z_spec'] > 0
+
+    z_spec=radio_DeCALS_cat['z_spec'][z]
+
+    print('Length is ',len(z_spec))
+
+    plt.title(cluster_name)
+    plt.axvline(np.median(z_spec))
+    n, bins = np.histogram(z_spec, bins=50)
+    plt.hist(z_spec, bins=30, color='purple', alpha=0.5, label='redshift')
+    plt.text(np.max(z_spec),np.argmax(n)+7,f'Mean z is {np.median(z_spec):.4f}', fontsize=15, ha='right', va='top')
+    plt.text(np.max(z_spec),np.argmax(n)+12,f'Total galaxies is {len(z_spec):.0f}', fontsize=15, ha='right', va='top')
+    plt.show()
+
+
+
+
 
 def circle(folder_path,cluster_name,galaxy_ra_DeCALS,galaxy_dec_DeCALS,zsp,cluster_centre,zsp_min,zsp_max,search_radius):
 
-    galaxy_ra_circle=[]
+    
+    galaxy_ra=[]
     galaxy_dec_circle=[]
     redshift=[]
 
@@ -434,6 +652,8 @@ def circle(folder_path,cluster_name,galaxy_ra_DeCALS,galaxy_dec_DeCALS,zsp,clust
 
 def redshift_distribution(folder_path,cluster_name,galaxy_ra_circle,galaxy_dec_circle,redshift_circle,cluster_centre,zsp_min,zsp_max):
 
+
+
     zsp_min_1 = 0.24
     zsp_max_1 = 0.30
 
@@ -459,8 +679,17 @@ def redshift_distribution(folder_path,cluster_name,galaxy_ra_circle,galaxy_dec_c
     plt.savefig(folder_path + cluster_name + '_redshift_distribution.pdf')
     plt.show()
 
-def velocity_dispersion(galaxy_ra_SDSS,galaxy_dec_SDSS,zsp,cluster_centre,R_200_Mpc,zsp_min,zsp_max,cluster_z_lit):
+
+
+def velocity_dispersion(cluster_centre,R_200_Mpc,zsp_min,zsp_max,cluster_z_lit,DeCALS_catalog):
     
+    DeCALS_cat=fits.open(DeCALS_catalog)[1].data
+
+    galaxy_ra_SDSS=DeCALS_cat['ra']
+    galaxy_dec_SDSS=DeCALS_cat['dec']
+    #import IPython;IPython.embed()
+
+    zsp=DeCALS_cat['z_spec']
 
     def R_200_to_deg(distance_Mpc,redshift):
 
@@ -574,26 +803,40 @@ def  cluster_members(folder_path,cluster_name,SDSS_cat,DeCALS_catalogue_fits,DEI
 
         return(cluster_member)
 
-    DeCALS_catalogue = fits.open(DeCALS_catalogue_fits)
-    DeCALS_cat=DeCALS_catalogue[1].data
+    DeCALS_cat= fits.open(DeCALS_catalogue_fits)[1].data
+  
 
-
-    SDSS_catalogue = fits.open(SDSS_cat)
-    SDSS_cat=SDSS_catalogue[1].data
-
+    SDSS_cat= fits.open(SDSS_cat)[1].data
+    
 
     galaxy_ra_SDSS = SDSS_cat['ra']
 
     galaxy_dec_SDSS = SDSS_cat['dec']
 
-    galaxy_ra_DeCALS = DeCALS_cat['ra'][(DeCALS_cat['survey'] != 'SDSS') & (DeCALS_cat['survey'] != 'BOSS') & (DeCALS_cat['survey'] != 'eBOSS-ELG')& (DeCALS_cat['survey'] != 'eBOSS-ELG') ]
+    galaxy_ra_DeCALS= DeCALS_cat['ra']
 
-    galaxy_dec_DeCALS = DeCALS_cat['dec'][(DeCALS_cat['survey'] != 'SDSS') & (DeCALS_cat['survey'] != 'BOSS') & (DeCALS_cat['survey'] != 'eBOSS-ELG') & (DeCALS_cat['survey'] != 'eBOSS-ELG')]
+    galaxy_dec_DeCALS = DeCALS_cat['dec']
+
+    # galaxy_ra_DeCALS = DeCALS_cat['ra'][(DeCALS_cat['survey'] != 'SDSS') & (DeCALS_cat['survey'] != 'BOSS') & (DeCALS_cat['survey'] != 'eBOSS-ELG')& (DeCALS_cat['survey'] != 'eBOSS-ELG') ]
+
+    # galaxy_dec_DeCALS = DeCALS_cat['dec'][(DeCALS_cat['survey'] != 'SDSS') & (DeCALS_cat['survey'] != 'BOSS') & (DeCALS_cat['survey'] != 'eBOSS-ELG') & (DeCALS_cat['survey'] != 'eBOSS-ELG')]
+    
+    # redshift_DeCALS = DeCALS_cat['z_spec'][(DeCALS_cat['survey'] != 'SDSS') & (DeCALS_cat['survey'] != 'BOSS') & (DeCALS_cat['survey'] != 'eBOSS-ELG')& (DeCALS_cat['survey'] != 'eBOSS-ELG')]
+
+
 
     redshift_SDSS=SDSS_cat['zsp']
 
-    redshift_DeCALS = DeCALS_cat['z_spec'][(DeCALS_cat['survey'] != 'SDSS') & (DeCALS_cat['survey'] != 'BOSS') & (DeCALS_cat['survey'] != 'eBOSS-ELG')& (DeCALS_cat['survey'] != 'eBOSS-ELG')]
+    mask=DeCALS_cat['z_spec'] > 0
 
+    galaxy_ra_DeCALS= DeCALS_cat['ra'][mask]
+
+    galaxy_dec_DeCALS = DeCALS_cat['dec'][mask]
+
+    redshift_DeCALS=DeCALS_cat['z_spec'][mask]
+
+   
+  
     cluster_member_SDSS=cluster_members_find(redshift_SDSS,sigma_cluster_z,cluster_z_lit) 
 
     cluster_member_DeCALS=cluster_members_find(redshift_DeCALS,sigma_cluster_z,cluster_z_lit) 
@@ -651,6 +894,7 @@ def  cluster_members(folder_path,cluster_name,SDSS_cat,DeCALS_catalogue_fits,DEI
 
         plt.xlabel("RA in deg",fontsize=15)
         plt.ylabel("DEC in deg",fontsize=15)
+        plt.tight_layout()
         plt.title(cluster_name + r" Member galaxies at $-3 \sigma < z_{cluster} <  3 \sigma$",fontsize=17)
         circle=plt.Circle((cluster_centre.ra.value, cluster_centre.dec.value), R_200_to_deg(R_200_Mpc,cluster_z_lit), edgecolor= 'red',facecolor='None', linewidth=2, alpha=1 ,ls = 'dashed') #, )
         plt.gca().add_patch(circle)
@@ -761,145 +1005,8 @@ def  cluster_members(folder_path,cluster_name,SDSS_cat,DeCALS_catalogue_fits,DEI
 
 
 
+
 def redshift_plots(folder_path,cluster_name,sigma_cluster_z,new_cluster_z, DeCALS_catalogue_fits):
-
-    def clip(data, nsigma):
-        '''iteratively removes data until all is within nsigma of the median, then returns the median and std'''
-        lennewdata = 0
-        lenolddata = data.size
-        while lenolddata>lennewdata:
-            lenolddata = data.size
-            data = data[np.where((data<np.nanmedian(data)+nsigma*np.nanstd(data))&(data>np.nanmedian(data)-nsigma*np.nanstd(data)))]
-            lennewdata = data.size
-        return np.median(data), np.std(data)
-
-    mag1_filter=20
-    mag2_filter=20
-
-    z_lower=0.25
-    z_high=0.30
-
-    DeCALS_catalogue = fits.open(DeCALS_catalogue_fits)
-    DeCALS_cat=DeCALS_catalogue[1].data
-
-    mask = np.where((DeCALS_cat['z_spec'] >0 ) )
-
-    zsp = DeCALS_cat['z_spec'][mask] 
-    zph = DeCALS_cat['z_phot_median'][mask] #z_phot_median photoz_median'
-
-    mag_1 = DeCALS_cat['mag_g'][mask]
-    mag_2 = DeCALS_cat['mag_r'][mask]
-
-    zph_filter=np.array(zph)[(mag_1 < mag1_filter) & (mag_2 < mag2_filter) ]
-    zsp_filter=np.array(zsp)[(mag_1 < mag1_filter) & (mag_2 < mag2_filter) ]
-
-    zph=np.array(zph)
-    zsp=np.array(zsp)
-
-
-    # target_region_filter = zsp_final[np.where((zsp_final>0.25)&(zsp_final<0.3)&(zph_final>0.2)&(zph_final<0.4))]
-    
-    # target_region_nofilter = zsp_final_nofilter[np.where((zsp_final_nofilter>0.25)&(zsp_final_nofilter<0.3)&(zph_final_nofilter>0.2)&(zph_final_nofilter<0.4))]
-    
-    mask_sigma=np.where((zph_filter>z_lower)&(zph_filter<z_high))
-
-
-    zph_minus_zsp_before = np.array(zph_filter-zsp_filter)[mask_sigma]
-    
-    
-    n, bins = np.histogram(zph_minus_zsp_before, bins=50)
-
-    bin_centre=(bins[np.argmax(n)]+bins[np.argmax(n)+1])/2
-
-    #import IPython;IPython.embed()
-    fig = plt.figure(figsize=(20, 7))
-
-    mean = np.mean(zph_minus_zsp_before)
-    std =np.std(zph_minus_zsp_before)
-
-
-    x_min =np.min(zph_minus_zsp_before) - 3 * std
-    x_max = np.max(zph_minus_zsp_before) + 3 * std
-
-
-    x = np.linspace(x_min, x_max, 1000)
-    FWHM=clip(zph_minus_zsp_before, 3)[1]*2.23
-    plt.hist(zph_minus_zsp_before-bin_centre, bins=50, density=True,range=(-0.2,0.2)) 
-    plt.plot(x, norm.pdf(x, clip(zph_minus_zsp_before, 3)[0]-bin_centre, clip(zph_minus_zsp_before, 3)[1]))
-    plt.xlim(-0.4,0.4)
-    plt.text(0.4, 25,f'FWHM is {FWHM:.4f}', fontsize=15, color='red', ha='right', va='top')
-    plt.xlabel('zphot - zpec ',fontsize=20)
-    plt.title(r"zphot $\sigma$ determination for " + cluster_name,fontsize=22)
-    plt.savefig(folder_path+cluster_name+'_delta_photo_z_distribution.pdf')
-    plt.show()
-   
-
-
-    fig = plt.figure(figsize=(20, 10))
-
-
-    plt.subplot(221)
-    plt.scatter(zph,zsp)
-    plt.plot(zsp, zsp, 'k-', lw=2,label='one-to-one')
-    plt.axhline(y=new_cluster_z-5*sigma_cluster_z, color='r', linestyle='-')
-    plt.axhline(y=new_cluster_z+5*sigma_cluster_z, color='r', linestyle='-')
-    plt.axvline(x=0, color='r', linestyle='-')
-    plt.axvline(x=1, color='r', linestyle='-')
-    plt.title(cluster_name + " photo z vs spec z for galaxies at 1 > z > 0")
-    #plt.title('Outlier ratio is {}'.format(mag_1))
-    plt.xlabel('photometric redshift')
-    plt.ylabel('spectroscopic redshift')
-    plt.xlim(0,1)
-    plt.ylim(0,1)
-
-
-    plt.subplot(222)
-    plt.scatter(zph,zsp)
-    plt.plot(zsp, zsp, 'k-', lw=2,label='one-to-one')
-    plt.axhline(y=new_cluster_z-5*sigma_cluster_z, color='r', linestyle='-')
-    plt.axhline(y=new_cluster_z+5*sigma_cluster_z, color='r', linestyle='-')
-    plt.axvline(x=z_lower, color='r', linestyle='-')
-    plt.axvline(x=z_high, color='r', linestyle='-')
-    plt.title('Zoom in of photo z vs spec z for galaxies at  1 > z > 0 showing \n the redshift sample of interest' )
-    #plt.title('Outlier ratio is {}'.format(mag_1))
-    plt.xlabel('photometric redshift')
-    plt.ylabel('spectroscopic redshift')
-    plt.xlim(0.1,0.5)
-    plt.ylim(0.2,0.35)
-
-    plt.subplot(223)
-    plt.scatter(zph_filter,zsp_filter)
-    plt.plot(zsp_filter, zsp_filter, 'k-', lw=2,label='one-to-one')
-    plt.axhline(y=new_cluster_z-5*sigma_cluster_z, color='r', linestyle='-')
-    plt.axhline(y=new_cluster_z+5*sigma_cluster_z, color='r', linestyle='-')
-    plt.axvline(x=0, color='r', linestyle='-')
-    plt.axvline(x=1, color='r', linestyle='-')
-    plt.title(cluster_name + " photo z vs spec z for galaxies at 1 > z > 0 \n after magnitude filter")
-    #plt.title('Outlier ratio is {}'.format(mag_1))
-    plt.xlabel('photometric redshift')
-    plt.ylabel('spectroscopic redshift')
-    plt.xlim(0,1)
-    plt.ylim(0,1)
-
-
-    plt.subplot(224)
-    plt.scatter(zph_filter,zsp_filter)
-    plt.plot(zsp_filter, zsp_filter, 'k-', lw=2,label='one-to-one')
-    plt.axhline(y=new_cluster_z-5*sigma_cluster_z, color='r', linestyle='-')
-    plt.axhline(y=new_cluster_z+5*sigma_cluster_z, color='r', linestyle='-')
-    plt.axvline(x=z_lower, color='r', linestyle='-')
-    plt.axvline(x=z_high, color='r', linestyle='-')
-    plt.title(cluster_name + " Zoom in of photo z vs spec z for galaxies at  1 > z > 0 showing \n the redshift sample of interest after magnitude filter")
-    #plt.title('Outlier ratio is {}'.format(mag_1))
-    plt.xlabel('photometric redshift')
-    plt.ylabel('spectroscopic redshift')
-    plt.xlim(0.1,0.5)
-    plt.ylim(0.2,0.35)
-    plt.savefig(folder_path+cluster_name+'_photo_z_determination.pdf')
-    plt.show()
-
-
-def redshift_plots_err(folder_path,cluster_name,sigma_cluster_z,new_cluster_z, DeCALS_catalogue_fits):
 
     def clip(data, nsigma):
         '''iteratively removes data until all is within nsigma of the median, then returns the median and std'''
@@ -928,9 +1035,17 @@ def redshift_plots_err(folder_path,cluster_name,sigma_cluster_z,new_cluster_z, D
     zsp = DeCALS_cat['z_spec'][mask] 
     zph = DeCALS_cat['z_phot_median'][mask] #z_phot_median photoz_median'
 
+
+
     photoz_err= (DeCALS_cat['z_phot_u68']-DeCALS_cat['z_phot_l68'])/2
 
     mask_filter= np.where(( photoz_err > 0) & (photoz_err/DeCALS_cat['z_phot_median'] * 100 < 10)& (DeCALS_cat['z_spec'] >0 ))
+
+
+    # M_err_raw= np.array((np.log10(HSC_catalog['stellar_mass_err68_max'])-np.log10(HSC_catalog['stellar_mass_err68_min']))/2)
+    # sfr_err_raw= np.array((np.log10(HSC_catalog['sfr_err68_max'])-np.log10(HSC_catalog['sfr_err68_min']))/2)
+
+
 
     #mask_filter= np.where(((ivar2errflux(DeCALS_cat['flux_ivar_g'])/DeCALS_cat['flux_g']) * 100 < 1) & ((ivar2errflux(DeCALS_cat['flux_ivar_r'])/DeCALS_cat['flux_r'])*100 < 1)& ((ivar2errflux(DeCALS_cat['flux_ivar_z'])/DeCALS_cat['flux_z'])*100 < 1) & (DeCALS_cat['z_spec'] >0 ))
 
@@ -950,36 +1065,36 @@ def redshift_plots_err(folder_path,cluster_name,sigma_cluster_z,new_cluster_z, D
     plt.scatter(zph_filter[sample],zsp_filter[sample])
     
 
-    flux_w1_data_bad = ivar2errflux(DeCALS_cat['flux_ivar_w1'][upper_bad])/(DeCALS_cat['flux_w1'][upper_bad] * 100)
-    flux_w2_data_bad = ivar2errflux(DeCALS_cat['flux_ivar_w2'][upper_bad])/(DeCALS_cat['flux_w2'][upper_bad] * 100)
+    # flux_w1_data_bad = ivar2errflux(DeCALS_cat['flux_ivar_w1'][upper_bad])/(DeCALS_cat['flux_w1'][upper_bad] * 100)
+    # flux_w2_data_bad = ivar2errflux(DeCALS_cat['flux_ivar_w2'][upper_bad])/(DeCALS_cat['flux_w2'][upper_bad] * 100)
 
-    flux_w3_data_bad = ivar2errflux(DeCALS_cat['flux_ivar_w3'][upper_bad])/(DeCALS_cat['flux_w3'][upper_bad] * 100)
-    flux_w4_data_bad = ivar2errflux(DeCALS_cat['flux_ivar_w4'][upper_bad])/(DeCALS_cat['flux_w4'][upper_bad] * 100)
+    # flux_w3_data_bad = ivar2errflux(DeCALS_cat['flux_ivar_w3'][upper_bad])/(DeCALS_cat['flux_w3'][upper_bad] * 100)
+    # flux_w4_data_bad = ivar2errflux(DeCALS_cat['flux_ivar_w4'][upper_bad])/(DeCALS_cat['flux_w4'][upper_bad] * 100)
 
 
-    flux_w1_sample = ivar2errflux(DeCALS_cat['flux_ivar_w1'][sample]) /(DeCALS_cat['flux_w1'][sample] * 100)                 
-    flux_w2_sample = ivar2errflux(DeCALS_cat['flux_ivar_w2'][sample] ) /(DeCALS_cat['flux_w2'][sample]  * 100)  
-    flux_w3_sample = ivar2errflux(DeCALS_cat['flux_ivar_w3'][sample]) /(DeCALS_cat['flux_w3'][sample] * 100)                 
-    flux_w4_sample = ivar2errflux(DeCALS_cat['flux_ivar_w4'][sample] ) /(DeCALS_cat['flux_w4'][sample]  * 100)                  
+    # flux_w1_sample = ivar2errflux(DeCALS_cat['flux_ivar_w1'][sample]) /(DeCALS_cat['flux_w1'][sample] * 100)                 
+    # flux_w2_sample = ivar2errflux(DeCALS_cat['flux_ivar_w2'][sample] ) /(DeCALS_cat['flux_w2'][sample]  * 100)  
+    # flux_w3_sample = ivar2errflux(DeCALS_cat['flux_ivar_w3'][sample]) /(DeCALS_cat['flux_w3'][sample] * 100)                 
+    # flux_w4_sample = ivar2errflux(DeCALS_cat['flux_ivar_w4'][sample] ) /(DeCALS_cat['flux_w4'][sample]  * 100)                  
 
     
-    # plt.hist(flux_w1_data_bad, bins=30, color='blue', alpha=0.5, label='flux_w1 pollution')
-    # plt.hist(flux_w2_data_bad, bins=30, color='green', alpha=0.5, label='flux_w2 pollution')
-    plt.hist(flux_w3_data_bad, bins=30, color='purple', alpha=0.5, label='flux_w3 pollution')
-    plt.hist(flux_w4_data_bad, bins=30, color='yellow', alpha=0.5, label='flux_w4 pollution')
+    # # plt.hist(flux_w1_data_bad, bins=30, color='blue', alpha=0.5, label='flux_w1 pollution')
+    # # plt.hist(flux_w2_data_bad, bins=30, color='green', alpha=0.5, label='flux_w2 pollution')
+    # plt.hist(flux_w3_data_bad, bins=30, color='purple', alpha=0.5, label='flux_w3 pollution')
+    # plt.hist(flux_w4_data_bad, bins=30, color='yellow', alpha=0.5, label='flux_w4 pollution')
 
-    # plt.hist(flux_w1_sample, bins=30, color='red', alpha=0.5, label='flux_w1 sample',histtype='step')
-    # plt.hist(flux_w2_sample, bins=30, color='purple', alpha=0.5, label='flux_w2 sample',histtype='step')
-    plt.hist(flux_w3_sample, bins=30, color='black', alpha=0.5, label='flux_w3 sample',histtype='step')
-    plt.hist(flux_w4_sample, bins=30, color='cyan', alpha=0.5, label='flux_w4 sample',histtype='step')
+    # # plt.hist(flux_w1_sample, bins=30, color='red', alpha=0.5, label='flux_w1 sample',histtype='step')
+    # # plt.hist(flux_w2_sample, bins=30, color='purple', alpha=0.5, label='flux_w2 sample',histtype='step')
+    # plt.hist(flux_w3_sample, bins=30, color='black', alpha=0.5, label='flux_w3 sample',histtype='step')
+    # plt.hist(flux_w4_sample, bins=30, color='cyan', alpha=0.5, label='flux_w4 sample',histtype='step')
 
-    plt.xlabel('Percentage error')
-    plt.ylabel('Frequency')
-    plt.legend()
-    plt.title('Histograms of errors in the individual DeCALS bands for sample sources and pollution sources')
+    # plt.xlabel('Percentage error')
+    # plt.ylabel('Frequency')
+    # plt.legend()
+    # plt.title('Histograms of errors in the individual DeCALS bands for sample sources and pollution sources')
 
-    # Show the plot
-    plt.show()
+    # # Show the plot
+    # plt.show()
 
 
 
@@ -1087,11 +1202,211 @@ def redshift_plots_err(folder_path,cluster_name,sigma_cluster_z,new_cluster_z, D
     plt.show()
 
     
-
-def radio_SFR(folder_path,cluster_name,FAST_cat,flux_MeerKAT,flux_err_MeerKAT,FAST_id,isl_id_MeerKAT,W1_flux,W2_flux,u68_lmass,
-              l68_lmass,galaxy_ra_MeerKAT,galaxy_dec_MeerKAT,FAST_z,lmass,cluster_z_lit):
+def M_SFR_HSC(folder_path,cluster_name,HSC_catalog_fits,radio_HSC_catalog_fits,cluster_z_lit,sigma_cluster_z):
 
 
+    HCS_catalogue = fits.open(HSC_catalog_fits)
+    HSC_cat=HCS_catalogue[1].data
+
+    radio_HCS_catalogue = fits.open(radio_HSC_catalog_fits)
+    radio_HSC_cat=radio_HCS_catalogue[1].data
+
+
+    h=0.7
+    H0=h*100
+    cosmo = cp.FlatLambdaCDM(H0=h*100, Om0=0.30)
+
+
+
+    def redshift_to_age(z):
+
+        t=(Planck13.age(z)).value
+
+        return(t)
+
+
+    def popetso_MS1(logM,t):
+
+        a0=0.20
+        a1=-0.034
+        b0=-26.134
+        b1=4.722
+        b2=-0.1925
+
+        MS_1= (a1*t+b1)*logM + b2*logM**2+(b0+a0*t)
+
+        return(MS_1)
+    
+
+    def AGN_MS(logM,z):
+        p1=20.97
+        p2=2.51
+        p3=1.411
+
+        AGN_MS= p1 + p2*np.log10(1+z)+p3*(logM-10)
+
+        return(AGN_MS)
+
+
+    
+    SFR_constant = 3.18e-22
+
+
+    M_raw=np.array(HSC_cat['stellar_mass'])
+
+    sfr_raw=np.array(HSC_cat['sfr'])
+
+
+
+    M_raw_radio=np.array(radio_HSC_cat['stellar_mass'])
+
+    sfr_raw_radio=np.array(radio_HSC_cat['sfr'])
+
+   
+
+    photoz_err= (HSC_cat['photoz_err68_max']-HSC_cat['photoz_err68_min'])/2
+
+
+    photoz_err_radio= (radio_HSC_cat['photoz_err68_min']-radio_HSC_cat['photoz_err68_max'])/2
+
+
+    M_err_raw= np.array((np.log10(HSC_cat['stellar_mass_err68_max'])-np.log10(HSC_cat['stellar_mass_err68_min']))/2)
+    sfr_err_raw= np.array((np.log10(HSC_cat['sfr_err68_max'])-np.log10(HSC_cat['sfr_err68_min']))/2)
+
+
+
+
+
+    M_err_raw_radio= np.array((np.log10(radio_HSC_cat['stellar_mass_err68_max'])-np.log10(radio_HSC_cat['stellar_mass_err68_min']))/2)
+    sfr_err_raw_radio = np.array((np.log10(radio_HSC_cat['sfr_err68_max'])-np.log10(radio_HSC_cat['sfr_err68_min']))/2)
+
+    thresh=50
+
+    mask= np.where(((HSC_cat['photoz_median']  > (cluster_z_lit-cluster_z_lit*sigma_cluster_z)) & (HSC_cat['photoz_median']  < (cluster_z_lit+cluster_z_lit*sigma_cluster_z)))) #& ((M_err_raw / M_raw) * 100 < thresh) & ((sfr_err_raw / sfr_raw) * 100  < thresh))
+    #mask_radio= np.where(( radio_HSC_cat['photoz_median'] > 0) & (photoz_err/radio_HSC_cat['photoz_median'] * 100 < 10)& (radio_HSC_cat['photoz_median'] >0 )&(photoz > 0.25) & (photoz < 0.3))
+
+
+    stellar_photoz=HSC_cat['photoz_median']
+
+    radio_photoz=radio_HSC_cat['photoz_median']
+
+    mask_radio = np.where(np.isin(radio_photoz, stellar_photoz))
+    
+    print('min photoz',np.min(stellar_photoz))
+
+    print('max photoz',np.max(stellar_photoz))
+
+    print('Total length of photoz before',len(HSC_cat['photoz_median']))
+
+    print('Total length of photoz radio before',len(radio_photoz))
+ 
+
+    M=M_raw[mask]
+    #M_err=M_err_raw[mask]
+
+    M_radio=M_raw_radio[mask_radio]
+    #M_err_radio=M_err_raw_radio[mask_radio]
+  
+    sfr=sfr_raw[mask]
+    #sfr_err=sfr_err_raw[mask]
+
+    sfr_radio=sfr_raw_radio[mask_radio]
+    #sfr_err_radio=sfr_err_raw_radio[mask_radio]
+
+    print('Total length of photoz after',len(stellar_photoz))
+
+    print('Total length of photoz radio after',len(radio_photoz[mask_radio]))
+    
+
+    z = [cluster_z_lit]
+
+    tages = redshift_to_age(z)
+
+    
+
+    mask1=(np.log10(sfr_radio) > -5)   &  (np.log10(sfr_radio) < -3)
+
+    mask2=(np.log10(sfr_radio) > -3) &  (np.log10(sfr_radio) < -1)
+
+    mask3=(np.log10(sfr_radio) > -1) &  (np.log10(sfr_radio) < 3)
+
+
+    colors = cm.Spectral(np.linspace(2, 0, len(tages)))
+
+    fig = plt.figure(figsize=(13, 5))
+
+    for t_ind,  t in enumerate(tages):
+
+        logM=np.linspace(8.5,12,100)
+
+        plt.plot(logM,popetso_MS1(logM,t) ,label='MS eqn 10 from Popesso at $t$='+"{0:.1f}".format(t)+ ' Gyr ' ,color=colors[t_ind],linestyle='--')
+
+
+    plt.scatter(np.log10(M),np.log10(sfr),label='Galaxy stellar MS',alpha=0.7,s=15,color='blue')
+
+
+    plt.scatter(np.log10(M_radio)[mask1],np.log10(sfr_radio)[mask1],label='Main Sequence galaxies',marker='x',color='orange')
+
+    plt.scatter(np.log10(M_radio)[mask2],np.log10(sfr_radio)[mask2],label='Intermediate SFR galaxies',marker='x',color='red')
+
+    plt.scatter(np.log10(M_radio)[mask3],np.log10(sfr_radio)[mask3],label='Quiescent low SFR galaxies',marker='x',color='green')
+   
+    #plt.errorbar(np.log10(M),np.log10(sfr), xerr=np.log10(M_err), fmt='none', capsize=4,color='orange')
+    #plt.errorbar(np.log10(M),np.log10(sfr), yerr=np.log10(sfr_err), fmt='none', capsize=4,color='black')
+    plt.xlim(7,12)
+
+    # plt.ylim(-2,3)
+    plt.title(f"{cluster_name} mizuki derived Solar masses and SFR for member galaxies ", fontsize=14)
+    plt.xlabel('$log M/M_\odot$ using HCS photometric redshift',fontsize=17)
+    plt.ylabel('$log$ SFR',fontsize=17)
+    plt.tight_layout()
+    plt.legend()
+    plt.savefig(folder_path+cluster_name+'_galaxy_stellar_MS.pdf')
+    plt.show()
+	
+
+  
+
+
+
+def radio_SFR_DeCALS(folder_path,cluster_name,FAST_cat,radio_DeCALS_catalogue,cluster_z_lit ):
+
+    
+    radio_DeCALS=Table.read(radio_DeCALS_catalogue)
+    columns_to_keep = ['id' ,'z','l68_z', 'u68_z', 'ltau' , 'l68_ltau' , 'u68_ltau' ,  'metal', 'l68_metal', 'u68_metal' , 'lage' , 'l68_lage' , 'u68_lage'  , 'Av' , 'l68_Av' , 'u68_Av', 'lmass' ,'l68_lmass' ,'u68_lmass' , 'lsfr','l68_lsfr','u68_lsfr' ,  'lssfr' ,'l68_lssfr' , 'u68_lssfr' ,  'la2t' ,  'l68_la2t' , 'u68_la2t' ,  'chi2']
+    
+    FAST_catalog = pd.read_table(FAST_cat, sep="\s+", usecols=columns_to_keep)
+
+    t2 = Table.from_pandas(FAST_catalog)
+
+    
+    T=join(t2, radio_DeCALS,keys_left='id',keys_right='Isl_id')
+
+    
+    flux_MeerKAT=T['Total_flux']
+
+    flux_err_MeerKAT=T['E_Total_flux']
+
+    #spec_indx=radio_DeCALS['spec_indx']
+
+    def flux2mag(flux):
+        return (22.5-2.5*np.log10(flux))
+
+    mag_W1=flux2mag(T['FLUX_W1'])
+    mag_W2=flux2mag(T['FLUX_W2'])
+
+
+    lmass=T['lmass']
+
+    u68_lmass=T['u68_lmass']
+
+    l68_lmass=T['l68_lmass']
+
+
+
+    FAST_id=T['id']
+
+    z=T['z']
     
     def redshift_to_age(z):
 
@@ -1100,8 +1415,6 @@ def radio_SFR(folder_path,cluster_name,FAST_cat,flux_MeerKAT,flux_err_MeerKAT,FA
         return(t)
 
 
-    def flux2mag(flux):
-        return (22.5-2.5*np.log10(flux))
 
     def AGN_MS(logM,z):
         p1=20.97
@@ -1127,6 +1440,7 @@ def radio_SFR(folder_path,cluster_name,FAST_cat,flux_MeerKAT,flux_err_MeerKAT,FA
 
 
     def AGN_SF_ratio(logM,z):
+
         q1=-0.63
         q2=-0.05
         q3=0.61
@@ -1136,17 +1450,16 @@ def radio_SFR(folder_path,cluster_name,FAST_cat,flux_MeerKAT,flux_err_MeerKAT,FA
         return(AGN_MS)
 
 
-
     def radio_lum(flux,z,si,freq):
 
-        S_14=(np.array(Radio_flux)/(freq**si)) * (1400e6**si)
+
+        S_14=(np.array(flux)/(freq**si)) * (1400e6**si)
 
         lumo_distance=np.array(cosmo.luminosity_distance(z))
 
-        radio_lumo=(4*np.pi*(flux*10**-26)*(lumo_distance*3.086e22)**2)*(1/(1+(z**(si+1))))
+        radio_lumo=(4*np.pi*(S_14*10**-26)*(lumo_distance*3.086e22)**2)*(1/(1+(z**(si+1))))
 
         return(radio_lumo)
-
 
 
     def popetso_MS1(logM,t):
@@ -1174,45 +1487,50 @@ def radio_SFR(folder_path,cluster_name,FAST_cat,flux_MeerKAT,flux_err_MeerKAT,FA
         return(MS_2)
     
 
-    intersect=np.intersect1d(np.array(FAST_id),np.array(isl_id_MeerKAT),return_indices= True)
-
-
-    Mstar_SDSS_err=np.array((u68_lmass-l68_lmass)/2)[intersect[1]]
-
-
-    Mstar_SDSS=np.array(lmass[intersect[1]])
-
-    Radio_flux=flux_MeerKAT[intersect[2]]
-
-    W1=W1_flux[intersect[2]]
-
-    W2=W2_flux[intersect[2]]
-
     h=0.7
     H0=h*100
     cosmo = cp.FlatLambdaCDM(H0=h*100, Om0=0.30)
 
+    #import IPython;IPython.embed()
+    radio_lumo=radio_lum(flux_MeerKAT,z,-0.7,1283e6)
 
-    SFR_constant = 3.18e-22
-
-
-    print('intersect',len(intersect[1]))
-
+    radio_lumo_err=radio_lum(flux_err_MeerKAT,z,-0.7,1283e6)
 
 
-    radio_lumo=radio_lum(flux_MeerKAT[intersect[2]],FAST_z[intersect[1]],-0.8,1283e6)
+    index_radio_loud=radio_lumo < 10**23
 
-    radio_lumo_err=radio_lum(flux_err_MeerKAT[intersect[2]],FAST_z[intersect[1]],-0.8,1283e6)
+    index_wise=(mag_W1-mag_W2) <Wise_R90(mag_W1,mag_W2)
+    
+    combined_mask =  np.logical_or(index_radio_loud,index_wise)
 
-    SFR = 3.18e-22*np.array(radio_lumo)[radio_lumo < 10**23]
 
-    print(len(np.array(radio_lumo)[radio_lumo > 10**23]))
+    SFR_constant=3.18e-22
+    SFR = 3.18e-22*np.array(radio_lumo[combined_mask] )
 
-    SFR = 3.18e-22*np.array(radio_lumo)[radio_lumo < 10**23]
 
-    SFR_err=3.18e-22*np.array(radio_lumo_err)[radio_lumo < 10**23]
+    SFR_err=3.18e-22*np.array(radio_lumo_err[combined_mask])
 
-    print(len(np.array(radio_lumo)[radio_lumo < 10**23]))
+    Mstar_SDSS=lmass[combined_mask]
+
+    Mstar_SDSS_err=((u68_lmass-l68_lmass)/2)[combined_mask]
+
+
+    #mask= np.where((Mstar_SDSS_err_x/Mstar_SDSS_x * 100 < 30) & (SFR_err/SFR * 100 < 30))
+
+    # SFR=SFR[mask]
+    # SFR_err= SFR_err[mask]
+
+
+    # Mstar_SDSS=Mstar_SDSS_x[mask]
+
+
+    # Mstar_SDSS_err=Mstar_SDSS_err_x[mask]
+
+
+
+    print("Length after filter",len(Mstar_SDSS))
+
+    #import IPython;IPython.embed()
 
     z = [cluster_z_lit]
 
@@ -1226,11 +1544,8 @@ def radio_SFR(folder_path,cluster_name,FAST_cat,flux_MeerKAT,flux_err_MeerKAT,FA
         logM=np.linspace(8.5,12,100)
         M=10**(logM)
         
-        
-
         plt.plot(logM,popetso_MS1(logM,t),label='MS eqn 10 from Popesso at $t$='+"{0:.1f}".format(t)+ 'Gyr ' ,color=colors[t_ind],linestyle='--')
         
-
         plt.plot(logM,popetso_MS2(M,t),label='MS eqn 14 from Popesso at $t$='+"{0:.1f}".format(t)+ 'Gyr ' ,color=colors[t_ind])
         
         plt.plot(logM,np.log10(SFR_constant*10**(AGN_MS(logM,t))),label='AGN Main Sequence at $t$='+"{0:.1f}".format(t)+ 'Gyr ' ,color=colors[t_ind],linestyle=':')
@@ -1239,124 +1554,74 @@ def radio_SFR(folder_path,cluster_name,FAST_cat,flux_MeerKAT,flux_err_MeerKAT,FA
 
         plt.text(mid_x, mid_y+0.2, 'AGN MS', fontsize=12, color='blue', ha='center', va='center',rotation=18)
 
-    plt.scatter(Mstar_SDSS[:len(SFR)],np.log10(SFR),marker='o',color='b',label='Galaxy MS')
+    plt.scatter(Mstar_SDSS[np.where(SFR)],np.log10(SFR),marker='o',color='b',label='Galaxy MS')
 
-    plt.errorbar(Mstar_SDSS[:len(SFR)],np.log10(SFR), xerr=Mstar_SDSS_err[:len(SFR)], fmt='none', capsize=4,color='orange')
-    plt.errorbar(Mstar_SDSS[:len(SFR)],np.log10(SFR), yerr=np.log10(SFR_err), fmt='none', capsize=4,color='black')
+    plt.errorbar(Mstar_SDSS[np.where(SFR)],np.log10(SFR), xerr=np.abs(Mstar_SDSS_err[np.where(SFR)]), fmt='none', capsize=4,color='orange')
+    plt.errorbar(Mstar_SDSS[np.where(SFR)],np.log10(SFR), yerr=np.abs(np.log10(SFR_err)), fmt='none', capsize=4,color='black')
 
  
     plt.xlim(8.5,12)
     # plt.ylim(-1,3)
-    plt.title(f"{cluster_name} FAST derived Solar masses vs Radio SFR ", fontsize=14)
-    plt.xlabel('$log M/M_\odot$ using DeCALS photometric redshift')
-    plt.ylabel('$log$ SFR')
-
+    plt.title(f"{cluster_name}", fontsize=15)     
+    plt.xlabel('$log M/M_\odot$ using DeCALS photometric redshift',fontsize=17)
+    plt.ylabel('$log$ Radio SFR',fontsize=17)
+    plt.tight_layout()
     plt.legend()
     plt.savefig(folder_path+cluster_name+'_galaxy_MS.pdf')
     plt.show()  
 
 
-
-    mag_W1=np.array(flux2mag(W1))
-
-    mag_W2=np.array(flux2mag(W2))
-
-
-    #AGN excision
-
-
-    RA_wise=galaxy_ra_MeerKAT[:len(np.array(mag_W1-mag_W2)[(mag_W1-mag_W2) >Wise_R90(mag_W1,mag_W2)])]
-    DEC_wise=galaxy_dec_MeerKAT[:len(np.array(mag_W1-mag_W2)[(mag_W1-mag_W2) >Wise_R90(mag_W1,mag_W2)])]
-
-    print("Wise",len(RA_wise))
-
-    RA_lum=galaxy_ra_MeerKAT[:len(np.array(radio_lumo)[radio_lumo > 10**23])]
-    DEC_lum=galaxy_dec_MeerKAT[:len(np.array(radio_lumo)[radio_lumo > 10**23])]
-
-    print("Radio loud",len(RA_lum))
-
-    RA=np.append(RA_wise,RA_lum)
-
-    DEC=np.append(DEC_wise,DEC_lum)
-
-
-    radio_loud_AGN=folder_path+cluster_name+"_radio_loud_AGN.cat"
-    f = open(radio_loud_AGN, "w")
-    line = 'RA DEC'
-    f.write(line)
-    f.write('\n')
-    for i in range(len(RA)):
-            line=str(RA[i])+ '  ' +str(DEC[i])
-            f.write(line)
-            f.write('\n')
     
-    return(radio_loud_AGN)
+def red_sequence(folder_path,cluster_name,optical_catalog,cluster_centre,R_200):
+
+    def flux2mag(flux):
+        return (22.5-2.5*np.log10(flux))
+
+    mag_filter=27
+    optical_cat=fits.open(optical_catalog)[1].data
+
+    mask= np.where((np.sqrt((optical_cat['ra']-cluster_centre.ra.value)**2+(optical_cat['dec']-cluster_centre.dec.value))**2<= 15/60) & (optical_cat['Z_PHOT_MEDIAN'] > 0.15) &  (optical_cat['Z_PHOT_MEDIAN'] < 0.35) & (flux2mag(optical_cat['APFLUX_G'][:,0]) < mag_filter) & (flux2mag(optical_cat['APFLUX_R'][:,0]) < mag_filter))
+
+    optical_cat=optical_cat[mask]
+
+
+    mag_g=flux2mag(optical_cat['APFLUX_G'][:,0])
+    mag_r=flux2mag(optical_cat['APFLUX_R'][:,0])
+
+    redshift=optical_cat['Z_PHOT_MEDIAN']
+
+    #import IPython;IPython.embed()
+    tot_mag_r=flux2mag(optical_cat['FLUX_R'])
 
 
     
-def colour_colour(galaxy_ra,galaxy_dec,cluster_centre,R_200,zph,zsp,mag_1,mag_2,mag_filter):
+    def ivar2errflux(ivar):
+        df = np.sqrt(1/ivar) 
+        return df
+
     
-    galaxy_ra=np.array(galaxy_ra)
-    galaxy_dec=np.array(galaxy_dec)
-    zph=np.array(zph)
-    zsp=np.array(zsp)
-    
-    
-    ra_5Mpc_circle=[]
-    dec_5Mpc_circle=[]
-    zsp_R_200=[]
-    zph_R_200=[]
-    for i in range(len(galaxy_ra)):
-        if np.sqrt((galaxy_ra[i]-cluster_centre.ra.value)**2+(galaxy_dec[i]-cluster_centre.dec.value)**2)<= R_200:
-            zph_R_200.append(zph[i])
-            zsp_R_200.append(zsp[i])
-    
-    mask_array_1=~np.logical_or(np.isnan(zsp_R_200), np.isnan(zph_R_200))
-    
+    galaxy_ra=np.array(optical_cat['ra'])
+    galaxy_dec=np.array(optical_cat['dec'])
    
-    zsp_R_200=np.array(zsp_R_200)[mask_array_1]
-    
-    zph_R_200=np.array(zph_R_200)
-    
-    mag_2=np.array(mag_2)[mag_2 < mag_filter]
-    
-    mag_1=np.array(mag_1)[mag_1 < mag_filter]
-    
-    colour_1_zph=np.array(mag_1)[np.where((zph_R_200 > 0.2) & (zph_R_200 < 0.40))]
-    
-    colour_2_zph=np.array(mag_2)[np.where((zph_R_200 > 0.2) & (zph_R_200 < 0.40))]
-    
-    colour_1_zsp=np.array(mag_1)[np.where((zsp_R_200 > 0.26) & (zsp_R_200 < 0.30))]
-    
-    colour_2_zsp=np.array(mag_2)[np.where((zsp_R_200 > 0.26) & (zsp_R_200 < 0.30))]
-    
-    
-    
-    if len(colour_1_zph) > len(colour_2_zph):
-        colour_1_zph=np.array(colour_1_zph)[0:len(colour_2_zph)]
-    else:
-        colour_2_ph=np.array(colour_2_zph)[0:len(colour_1_zph)]
-        
     
 
-    if len(colour_1_zsp) > len(colour_2_zsp):
-        colour_1_zsp=np.array(colour_1_zsp)[0:len(colour_2_zsp)]
-    else:
-        colour_2_zsp=np.array(colour_2_zsp)[0:len(colour_1_zsp)]
-  
+    scatter=plt.scatter(tot_mag_r,mag_g-mag_r,c=redshift, cmap='viridis')
 
+
+    scatter=plt.scatter(tot_mag_r,mag_g-mag_r,c=redshift, cmap='viridis')
     
-    plt.scatter( colour_1_zsp,np.abs(colour_1_zsp-colour_2_zsp), color='blue', alpha=0.5,label='Spectra from 0.26 <z < 0.30')
-    
-    plt.scatter( colour_1_zph,np.abs(colour_1_zph-colour_2_zph), color='black', alpha=0.3,label='Photometry from 0.20 <z < 0.40',marker="x")
-    
-    
-    plt.ylabel(r'$mag_1-mag_2$')
-    plt.title(r"Colour-Colour plot of ZwCl at $R_{200} \sim 5$ Mpc filtered by $~mag_1,mag_2 < 20$")
+    plt.colorbar(scatter, label='redshift')
+
+
+    plt.xlabel(r'$mag_r$')
+    plt.ylabel(r'$mag_g - mag_r$')
+    # plt.ylim(-2,3)
+    plt.title(cluster_name+ ' ' +' DeCALS red sequence')
     plt.legend()
-    plt.xlabel(r'$mag_1$')
-    plt.legend()
+
     plt.show()
+
+
     
 def SDSS_DeCALS_Mstar(folder_path,cluster_name,SDSS_FAST_cat,DeCALS_FAST_cat):
                 
