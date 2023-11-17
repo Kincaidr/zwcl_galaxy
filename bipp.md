@@ -1,4 +1,4 @@
-
+o $FINUFFT_ROOT
 # Installing BIPP on izar
  
 ## 1. Activate your VPN if not on EPFL campus
