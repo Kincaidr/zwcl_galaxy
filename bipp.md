@@ -37,6 +37,8 @@ Create a file `make.inc` containing:
 ```
 CXXFLAGS = -I${FFTW_ROOT}/include
 LDFLAGS = -L${FFTW_ROOT}/lib
+
+export FFTW_ROOT=/ebsofts/FFTW/3.3.10-GCC-11.3.0
 ```
 Then compile:
 ```
