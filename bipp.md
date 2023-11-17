@@ -57,6 +57,7 @@ $ cd $INST_DIR
 $ git clone -b t3_d3 https://github.com/AdhocMan/cufinufft.git
 $ cd cufinufft
 $ module load cuda
+$ module load CUDA/11.7.0
 $ make clean && make -j
 ```
  
