@@ -83,7 +83,9 @@ But for simplicity it will be indicated as `(VENV) $` hereafter.
 (VENV) $ cd $INST_DIR
 (VENV) $ git clone https://github.com/epfl-radio-astro/bipp.git
 (VENV) $ cd bipp
-(VENV) $ module load cmake openblas/0.3.20-openmp
+(VENV) $ module load cmake openblas/0.3.20-openmp (original)
+(VENV) $ module load CMake/3.10.2
+(VENV) $ module load OpenBLAS/0.3.12
 (VENV) $ export FINUFFT_ROOT=${INST_DIR}/finufft
 (VENV) $ export CUFINUFFT_ROOT=${INST_DIR}/cufinufft
 (VENV) $ BIPP_GPU=CUDA CMAKE_PREFIX_PATH="${FINUFFT_ROOT};${CUFINUFFT_ROOT}" python -m pip install .
