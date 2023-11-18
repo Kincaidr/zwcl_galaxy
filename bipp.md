@@ -31,7 +31,9 @@ $ cd $INST_DIR
 ```
 $ git clone -b v2.1.0 https://github.com/flatironinstitute/finufft
 $ cd finufft/
-$ module load gcc fftw/3.3.10-openmp
+$ module load GCC/10.2.0
+$ module load FFTW/3.3.10
+$ module load gcc fftw/3.3.10-openmp (original)
 ```
 Create a file `make.inc` containing:
 ```
@@ -56,7 +58,7 @@ check_finufft.sh single-precision done. Summary:
 $ cd $INST_DIR
 $ git clone -b t3_d3 https://github.com/AdhocMan/cufinufft.git
 $ cd cufinufft
-$ module load cuda
+$ module load cuda (original)
 $ module load CUDA/11.7.0
 $ make clean && make -j
 ```
