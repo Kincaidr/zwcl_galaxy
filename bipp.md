@@ -113,11 +113,12 @@ First: log out and re-log in.
 $ salloc -N 1 -n 1 -p gpu -t 00:30:00
 Check if on GPU node:
 $ srun hostname
-$module load CUDA/11.7.0
-$module load GCC/10.2.0
-$module load FFTW/3.3.10
-$module load OpenBLAS/0.3.12
-$cd $INST_DIR
+Load all modules again:
+$ module load CUDA/11.7.0
+$ module load GCC/10.2.0
+$ module load FFTW/3.3.10
+$ module load OpenBLAS/0.3.12
+$ cd $INST_DIR
 $ source VENV/bin/activate
 Run using srun:
 (VENV) $ srun python -c "import bipp"
