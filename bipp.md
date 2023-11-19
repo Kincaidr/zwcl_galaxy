@@ -110,9 +110,13 @@ should return just nothing.
 ## 12. Testing BIPP
 First: log out and re-log in.
 ```
-$ cd $INST_DIR
+$ salloc -N 1 -n 1 -p gpu -t 00:30:00
+Check if on GPU node:
+$ srun hostname
+$cd $INST_DIR
 $ source VENV/bin/activate
-(VENV) $ python -c "import bipp"
+Run using srun:
+(VENV) $ srun python -c "import bipp"
 (VENV) $ cd bipp/examples/simulation/
 (VENV) $ python lofar_bootes_ss.py
 ```
