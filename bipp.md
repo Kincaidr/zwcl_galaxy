@@ -7,6 +7,14 @@ o $FINUFFT_ROOT
 ```
 $ ssh -Y <gaspar_username>@izar.epfl.ch
 ```
+## 3. Load all modules
+
+module load GCC/11.3.0
+module load FFTW/3.3.10
+module load CUDA/11.7.0
+module load OpenMPI/4.1.4
+module load CMake/3.25.1
+module load OpenBLAS/0.3.20
  
 ## 3. Open an interactive session (asking for 10+ CPU cores)
 ```
