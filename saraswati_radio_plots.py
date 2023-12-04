@@ -34,11 +34,11 @@ from scipy.stats import cumfreq
 def write_catalog(fits_files,cluster_name,app_image,int_image):
     
 
-    #img = bdsf.process_image(int_image, rms_box=(30,30),rms_box_bright=(12,12),adaptive_thresh=150,thresh_isl=4.0,thresh_pix=5.0,
-       #            detection_image=app_image,interactive=False,clobber=True,spectralindex_do = False) #spectralindex_do = True
+    img = bdsf.process_image(int_image, rms_box=(40,40),rms_box_bright=(15,15),adaptive_thresh=150,thresh_isl=4.0,thresh_pix=5.0,
+                  detection_image=app_image,interactive=False,clobber=True,spectralindex_do = False) #spectralindex_do = True
     
-    img = bdsf.process_image(int_image, rms_box=(40,40),rms_box_bright=(15,15),adaptive_thresh=150,thresh_isl=5.0,thresh_pix=5.0,
-                   detection_image=app_image,interactive=False,clobber=True,spectralindex_do = False,atrous_do = True)#,shapelet_do = True) 
+    # img = bdsf.process_image(int_image, rms_box=(40,40),rms_box_bright=(15,15),adaptive_thresh=150,thresh_isl=4.0,thresh_pix=5.0,
+    #                detection_image=app_image,interactive=False,clobber=True,spectralindex_do = False,atrous_do = False,shapelet_do = False) 
     
     # img = bdsf.process_image(int_image, rms_box=(20,10),adaptive_thresh=100,thresh_isl=4.0,thresh_pix=5.0,
     #                          detection_image=app_image)
@@ -47,6 +47,18 @@ def write_catalog(fits_files,cluster_name,app_image,int_image):
     img.export_image(outfile=fits_files+cluster_name+'_res_map.fits',clobber=True,img_type='gaus_resid')
 
     img.write_catalog(outfile=fits_files+cluster_name+'_srl.fits',format='fits', catalog_type='srl',clobber=True)
+
+    #sdsd
+    # img = bdsf.process_image(int_image, rms_box=(40,40),rms_box_bright=(15,15),adaptive_thresh=150,thresh_isl=4.0,thresh_pix=5.0,
+    #                detection_image=app_image,interactive=False,clobber=True,spectralindex_do = False,atrous_do = False,shapelet_do = True) 
+    
+    # # img = bdsf.process_image(int_image, rms_box=(20,10),adaptive_thresh=100,thresh_isl=4.0,thresh_pix=5.0,
+    # #                          detection_image=app_image)
+    
+    # img.export_image(outfile=fits_files+cluster_name+'_rms_map.fits',clobber=True,img_type='rms')
+    # img.export_image(outfile=fits_files+cluster_name+'_res_map.fits',clobber=True,img_type='gaus_resid')
+
+    # img.write_catalog(outfile=fits_files+cluster_name+'_shapelet_srl.fits',format='fits', catalog_type='srl',clobber=True)
 
 
 def write_catalog_20sigma(fits_files,cluster_name,app_image,int_image):
@@ -1320,7 +1332,7 @@ def flux_scale_FIRST(output_path,combined_MeerKAT_cat,flux_colname,Pflux_colname
         MeerKAT_cat = fits.open(combined_MeerKAT_cat)[1].data
      
     
-        mask=  np.where((MeerKAT_cat["Total_flux"] / MeerKAT_cat["Peak_flux"] > 0.9) & (MeerKAT_cat["Total_flux"] / MeerKAT_cat["Peak_flux"] < 1.1)   & ((MeerKAT_cat['E_Total_flux']/MeerKAT_cat['Total_flux']) < 0.1)& ((MeerKAT_cat[e_flux_colname]/MeerKAT_cat[flux_colname]) < 0.1))
+        mask=  np.where((MeerKAT_cat["Total_flux"] / MeerKAT_cat["Peak_flux"] > 0.8) & (MeerKAT_cat["Total_flux"] / MeerKAT_cat["Peak_flux"] < 1.2)   & ((MeerKAT_cat['E_Total_flux']/MeerKAT_cat['Total_flux']) < 0.1)& ((MeerKAT_cat[e_flux_colname]/MeerKAT_cat[flux_colname]) < 0.1))
 
 
         #mask2= np.where((ref_cat[flux_colname] / ref_cat[Pflux_colanme] > 0.7) & (ref_cat[flux_colname] / ref_cat[Pflux_colanme] < 1.5) & (ref_cat[Pflux_colanme] / 15e-6  > 100) & (ref_cat[Pflux_colanme] > np.percentile(ref_cat[Pflux_colanme], 5.0))& (ref_cat[flux_err_colname] / ref_cat[flux_colname] * 100 < 10))
@@ -1680,7 +1692,6 @@ def simulation(cluster_name,simulation_path,radio_catalogue_fits,fits_image,res_
     res_data=fits.open(res_image)[0].data
 
     
-
     print(np.shape(res_data))
 
     header=fits.getheader(fits_image)
@@ -1761,7 +1772,7 @@ def simulation(cluster_name,simulation_path,radio_catalogue_fits,fits_image,res_
             Data+=gaussian(xx,yy,xc,yc,re1,re2,S=flux_dist/10**6)
 
         fits_image=simulation_path+cluster_name+'_simulated_image_'+str(j)+'.fits'
-        fits.writeto(fits_image,data=Data,header=header)
+        fits.writeto(fits_image,data=Data,header=header,overwrite=True)
         print(fits_image+ ' ' +'written')
 
 
@@ -1785,15 +1796,15 @@ def simulation_catalog(simulation_path):
 
     for image in images:
 
-        img = bdsf.process_image(image, rms_box=(40,40),rms_box_bright=(15,15),adaptive_thresh=150,thresh_isl=50.0,thresh_pix=5.0,
+        img = bdsf.process_image(image, rms_box=(40,40),rms_box_bright=(15,15),adaptive_thresh=150,thresh_isl=4.0,thresh_pix=5.0,
                     detection_image=image,interactive=False ,clobber=True,spectralindex_do = False)#,atrous_do = True)
         
 
         img.write_catalog(outfile=image[:-5]+'_srl.fits',format='fits', catalog_type='srl',clobber=True)
-        print(image[:-5]+'_srl.fits' + 'catalog written')
+        print(image[:-5]+'_srl.fits' + ' catalog written')
 
 
-def complteness(simulation_path,radio_catalogue_fits):
+def completness(simulation_path,radio_catalogue_fits):
 
     sim_catalogs=glob.glob(simulation_path+'*_srl.fits')
 
@@ -1804,9 +1815,10 @@ def complteness(simulation_path,radio_catalogue_fits):
     min_flux=flux_real.min()
     max_flux=flux_real.max()
 
-    import IPython;IPython.embed()
+   
+    intervals=np.logspace(-6,5,500)
 
-    intervals=np.logspace(-6,2,20)
+    #intervals_sparce=np.logspace(-6,5,20)
 
 
     fig, ax = plt.subplots(1, 1, figsize=(6,6))
@@ -1816,19 +1828,111 @@ def complteness(simulation_path,radio_catalogue_fits):
         print(sim_cat)
         for int in range(len(intervals)-1):
             cat=Table.read(sim_cat)
-            
-            mask_real = (intervals[int] < real_cat['Total_flux']) & (real_cat['Total_flux'] < intervals[int+1])
-            mask = (intervals[int] < (cat['Total_flux']/10**6)) & ((cat['Total_flux']/10**6) < intervals[int+1])
-            
-            frac.append(np.sum(mask)/np.sum(mask_real))
-            print(np.sum(mask))
-     
-            
+
+            try:
+                mask_real = (intervals[int] < real_cat['Total_flux']) & (real_cat['Total_flux'] < intervals[int+1])
+                mask = (intervals[int] < (cat['Total_flux']/10**6)) & ((cat['Total_flux']/10**6) < intervals[int+1])
+                frac.append(np.sum(mask)/np.sum(mask_real))
+                
+            except FloatingPointError:
+                print('interval is ',intervals[int],intervals[int+1])
+                frac.append(np.nan)
+
+            print('mask and real counts',np.sum(mask),np.sum(mask_real))
         
-        ax.plot((intervals[:-1]+intervals[1:])/2, np.cumsum(frac), label=sim_cat)
-        ax.set_xscale('log')
+        plt.plot((intervals[:-1]+intervals[1:])/2, np.nancumsum(frac)/np.nancumsum(frac).max(), label=sim_cat)
+
+        np.median(intervals[:-1]+intervals[1:])/2
+
+        plt.scatter((intervals[:-1]+intervals[1:])/2, np.nancumsum(frac)/np.nancumsum(frac).max(), label=sim_cat)
+        plt.xscale('log')
+        ax.set_ylabel('Fraction',fontsize=15)
+        ax.set_xlabel('Flux density Jy',fontsize=15)
         ax.legend()
-        
+ 
+ 
     plt.show()
-        #histogram=np.histogram(frac,bins=intervals)
+
+
+
+
+def source_counts(radio_catalogue_fits):
+
+
+    real_cat=Table.read(radio_catalogue_fits)
+
+    flux_real=real_cat['Total_flux']
+
+
+    intervals=np.logspace(-5,-2,50)
+    intervals1=np.logspace(-2,4,30)
+
+    #intervals_sparce=np.logspace(-6,5,20)
+
+    source_totl=[]
+    fig, ax = plt.subplots(1, 1, figsize=(6,6))
+
+ 
+
+    for int in range(len(intervals)-1):
+        try:
+            mask_real = (intervals[int] < real_cat['Total_flux']) & (real_cat['Total_flux'] < intervals[int+1])
+
+            mean_flux=np.mean(real_cat['Total_flux'][mask_real])
+
+            source_tot0=np.sum(mask_real)
+
+            source_tot1=source_tot0/ (intervals[int+1]- intervals[int])
+
+            source_tot2=source_tot1/((1.5)*(np.pi/180)**2)
+
+            print(source_tot0,source_tot2)
+
+            source_norm=source_tot2/mean_flux**(-2.5)
+         
+            source_totl.append(source_norm)
+            
+        except FloatingPointError:
+            print('interval is ',intervals[int],intervals[int+1])
+            source_totl.append(np.nan)
+
+    source_totu=[]
+    for int in range(len(intervals1)-1):
+        try:
+            mask_real = (intervals1[int] < real_cat['Total_flux']) & (real_cat['Total_flux'] < intervals1[int+1])
+
+            mean_flux=np.mean(real_cat['Total_flux'][mask_real])
+
+            source_tot0=np.sum(mask_real)
+
+            source_tot1=source_tot0/ (intervals1[int+1]- intervals1[int])
+
+            source_tot2=source_tot1/((1.5)*(np.pi/180)**2)
+
+            print(source_tot0,source_tot2)
+
+            source_norm=source_tot2/mean_flux**(-2.5)
+         
+            source_totu.append(source_norm)
+            
+        except FloatingPointError:
+            print('interval is ',intervals[int],intervals[int+1])
+            source_totu.append(np.nan)
+
+
+
+    S_TLA=[0.242,0.284,0.333,0.391,0.460,0.540,0.634,0.745,0.875,1.10,1.49,2.00,2.70,3.65,4.92,6.63,9.70,15.41,24.36,38.61,61.20,97,153.7,243.6,737]
+    N_TLA=[12.49,12.26,14.33,15.48,15.24,15.72,15.73,18.37,18.88,22.55,25.58,28.09,31.61,41.89,52.37,58.26,82.08,168.5,215.2,215.1,325.8,520,908,1164.3,1751.2]
+    print('interval length is',len(((intervals[:-1]+intervals[1:])/2)))
+    print('source count length is',len(np.nancumsum(source_totl)))
+    plt.scatter(((intervals[:-1]+intervals[1:])/2)*10**3, source_totl,color='blue')
+    plt.scatter(((intervals1[:-1]+intervals1[1:])/2)*10**3, source_totu,color='blue')
+    plt.scatter(S_TLA, N_TLA,marker='x')
+    plt.xscale('log')
+    plt.yscale('log')
+    ax.set_ylabel(r'$S^{2.5}\; dN/dS [Jy^{-1}]$',fontsize=15)
+    ax.set_xlabel('Flux density Jy',fontsize=15)
+    ax.legend()
+    plt.show()
+    
     
